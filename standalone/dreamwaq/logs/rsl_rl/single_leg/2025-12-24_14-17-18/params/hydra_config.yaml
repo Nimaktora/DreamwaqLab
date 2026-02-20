@@ -1,0 +1,662 @@
+agent.algorithm.class_name: PPOWAQ
+agent.algorithm.clip_param: 0.2
+agent.algorithm.desired_kl: 0.01
+agent.algorithm.entropy_coef: 0.01
+agent.algorithm.gamma: 0.99
+agent.algorithm.lam: 0.95
+agent.algorithm.max_grad_norm: 1.0
+agent.algorithm.num_learning_epochs: 5
+agent.algorithm.num_mini_batches: 4
+agent.algorithm.optimizer: Adam
+agent.algorithm.schedule: adaptive
+agent.algorithm.use_clipped_value_loss: true
+agent.algorithm.value_loss_coef: 1.0
+agent.device: cuda:0
+agent.empirical_normalization: false
+agent.experiment_name: single_leg
+agent.load_checkpoint: model_.*.pt
+agent.load_run: .*
+agent.logger: tensorboard
+agent.max_iterations: 5000
+agent.neptune_project: isaaclab
+agent.note: ''
+agent.num_steps_per_env: 24
+agent.policy.activation: elu
+agent.policy.actor_hidden_dims:
+- 512
+- 256
+- 128
+agent.policy.class_name: ActorCriticLeg
+agent.policy.clip_action: ???
+agent.policy.critic_hidden_dims:
+- 512
+- 256
+- 128
+agent.policy.init_noise_std: 1.0
+agent.policy.squash_mode: ???
+agent.resume: false
+agent.run_name: ''
+agent.save_interval: 50
+agent.seed: 0
+agent.wandb_entity: amrmousa-m
+agent.wandb_project: isaaclab
+args: []
+env.actions.joint_pos.asset_name: robot
+env.actions.joint_pos.class_type: !!python/name:exts.flamingo.envs.mdp.actions.JointPositionActionWithHistory ''
+env.actions.joint_pos.clip: null
+env.actions.joint_pos.debug_vis: false
+env.actions.joint_pos.joint_names:
+- .*
+env.actions.joint_pos.offset: 0.0
+env.actions.joint_pos.preserve_order: false
+env.actions.joint_pos.scale: 0.25
+env.actions.joint_pos.use_default_offset: true
+env.commands.trajectory.asset_name: robot
+env.commands.trajectory.class_type: !!python/name:exts.flamingo.envs.mdp.commands.SingleLegTrajectoryCommand ''
+env.commands.trajectory.debug_vis: true
+env.commands.trajectory.ranges.amp_x: !!python/tuple
+- 0.0
+- 0.15
+env.commands.trajectory.ranges.amp_z: !!python/tuple
+- 0.0
+- 0.1
+env.commands.trajectory.ranges.center_x: !!python/tuple
+- -0.05
+- 0.05
+env.commands.trajectory.ranges.center_z: !!python/tuple
+- -0.35
+- -0.25
+env.commands.trajectory.ranges.freq: !!python/tuple
+- 0.2
+- 1.5
+env.commands.trajectory.ranges.phase: !!python/tuple
+- 0.0
+- 6.28
+env.commands.trajectory.resampling_time_range: !!python/tuple
+- 30.0
+- 30.0
+env.curriculum: null
+env.decimation: 4
+env.episode_length_s: 20.0
+env.events.apply_actuator_params.func: !!python/name:exts.flamingo.tasks.envs.base.apply_leg_actuator_params ''
+env.events.apply_actuator_params.interval_range_s: null
+env.events.apply_actuator_params.is_global_time: false
+env.events.apply_actuator_params.min_step_count_between_reset: 0
+env.events.apply_actuator_params.mode: startup
+env.events.apply_actuator_params.params.asset_name: robot
+env.events.apply_actuator_params.params.bias_range: !!python/tuple
+- -0.05
+- 0.05
+env.events.apply_actuator_params.params.time_lag_range: !!python/tuple
+- 0
+- 2
+env.events.physics_material.func: !!python/name:isaaclab.envs.mdp.events.randomize_rigid_body_material ''
+env.events.physics_material.interval_range_s: null
+env.events.physics_material.is_global_time: false
+env.events.physics_material.min_step_count_between_reset: 0
+env.events.physics_material.mode: startup
+env.events.physics_material.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: FL_foot
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: null
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.physics_material.params.dynamic_friction_range: !!python/tuple
+- 0.1
+- 2.5
+env.events.physics_material.params.num_buckets: 64
+env.events.physics_material.params.restitution_range: !!python/tuple
+- 0.0
+- 0.0
+env.events.physics_material.params.static_friction_range: !!python/tuple
+- 0.1
+- 2.5
+env.events.push_foot.func: !!python/name:isaaclab.envs.mdp.events.apply_external_force_torque ''
+env.events.push_foot.interval_range_s: !!python/tuple
+- 8.0
+- 12.0
+env.events.push_foot.is_global_time: false
+env.events.push_foot.min_step_count_between_reset: 0
+env.events.push_foot.mode: interval
+env.events.push_foot.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: FL_foot
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: null
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.push_foot.params.force_range: !!python/tuple
+- -10.0
+- 10.0
+env.events.push_foot.params.torque_range: !!python/tuple
+- 0.0
+- 0.0
+env.events.randomize_actuator_gains.func: !!python/name:isaaclab.envs.mdp.events.randomize_actuator_gains ''
+env.events.randomize_actuator_gains.interval_range_s: null
+env.events.randomize_actuator_gains.is_global_time: false
+env.events.randomize_actuator_gains.min_step_count_between_reset: 0
+env.events.randomize_actuator_gains.mode: startup
+env.events.randomize_actuator_gains.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: null
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: .*
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.randomize_actuator_gains.params.damping_distribution_params: !!python/tuple
+- 0.9
+- 1.1
+env.events.randomize_actuator_gains.params.distribution: uniform
+env.events.randomize_actuator_gains.params.operation: scale
+env.events.randomize_actuator_gains.params.stiffness_distribution_params: !!python/tuple
+- 0.9
+- 1.1
+env.events.randomize_mass_calf.func: &id001 !!python/name:isaaclab.envs.mdp.events.randomize_rigid_body_mass ''
+env.events.randomize_mass_calf.interval_range_s: null
+env.events.randomize_mass_calf.is_global_time: false
+env.events.randomize_mass_calf.min_step_count_between_reset: 0
+env.events.randomize_mass_calf.mode: startup
+env.events.randomize_mass_calf.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: FL_calf
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: null
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.randomize_mass_calf.params.mass_distribution_params: !!python/tuple
+- -0.1
+- 0.1
+env.events.randomize_mass_calf.params.operation: add
+env.events.randomize_mass_foot.func: *id001
+env.events.randomize_mass_foot.interval_range_s: null
+env.events.randomize_mass_foot.is_global_time: false
+env.events.randomize_mass_foot.min_step_count_between_reset: 0
+env.events.randomize_mass_foot.mode: startup
+env.events.randomize_mass_foot.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: FL_foot
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: null
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.randomize_mass_foot.params.mass_distribution_params: !!python/tuple
+- -0.05
+- 0.05
+env.events.randomize_mass_foot.params.operation: add
+env.events.randomize_mass_thigh.func: *id001
+env.events.randomize_mass_thigh.interval_range_s: null
+env.events.randomize_mass_thigh.is_global_time: false
+env.events.randomize_mass_thigh.min_step_count_between_reset: 0
+env.events.randomize_mass_thigh.mode: startup
+env.events.randomize_mass_thigh.params.asset_cfg: !!python/object:isaaclab.managers.scene_entity_cfg.SceneEntityCfg
+  body_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  body_names: FL_thigh
+  fixed_tendon_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  fixed_tendon_names: null
+  joint_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  joint_names: null
+  name: robot
+  object_collection_ids: !!python/object/apply:builtins.slice
+  - null
+  - null
+  - null
+  object_collection_names: null
+  preserve_order: false
+env.events.randomize_mass_thigh.params.mass_distribution_params: !!python/tuple
+- -0.2
+- 0.2
+env.events.randomize_mass_thigh.params.operation: add
+env.events.randomize_physics.func: !!python/name:exts.flamingo.tasks.envs.base.randomize_physics_custom ''
+env.events.randomize_physics.interval_range_s: null
+env.events.randomize_physics.is_global_time: false
+env.events.randomize_physics.min_step_count_between_reset: 0
+env.events.randomize_physics.mode: startup
+env.events.randomize_physics.params.armature_range: !!python/tuple
+- 0.0
+- 0.0
+env.events.randomize_physics.params.asset_name: robot
+env.events.randomize_physics.params.friction_range: !!python/tuple
+- 0.0
+- 0.0
+env.events.randomize_physics.params.viscous_range: !!python/tuple
+- 0.0
+- 0.0
+env.events.reset_joints.func: !!python/name:isaaclab.envs.mdp.events.reset_joints_by_scale ''
+env.events.reset_joints.interval_range_s: null
+env.events.reset_joints.is_global_time: false
+env.events.reset_joints.min_step_count_between_reset: 0
+env.events.reset_joints.mode: reset
+env.events.reset_joints.params.position_range: !!python/tuple
+- 0.5
+- 1.5
+env.events.reset_joints.params.velocity_range: !!python/tuple
+- 0.0
+- 0.0
+env.export_io_descriptors: false
+env.io_descriptors_output_dir: null
+env.is_finite_horizon: false
+env.observations.critic.concatenate_dim: -1
+env.observations.critic.concatenate_terms: true
+env.observations.critic.ee_error.clip: null
+env.observations.critic.ee_error.flatten_history_dim: true
+env.observations.critic.ee_error.func: !!python/name:exts.flamingo.envs.mdp.observations.ee_tracking_error ''
+env.observations.critic.ee_error.history_length: 0
+env.observations.critic.ee_error.modifiers: null
+env.observations.critic.ee_error.noise: null
+env.observations.critic.ee_error.params.command_name: trajectory
+env.observations.critic.ee_error.scale: null
+env.observations.critic.enable_corruption: false
+env.observations.critic.external_forces.clip: null
+env.observations.critic.external_forces.flatten_history_dim: true
+env.observations.critic.external_forces.func: !!python/name:exts.flamingo.envs.mdp.observations.foot_contact_forces ''
+env.observations.critic.external_forces.history_length: 0
+env.observations.critic.external_forces.modifiers: null
+env.observations.critic.external_forces.noise: null
+env.observations.critic.external_forces.scale: null
+env.observations.critic.flatten_history_dim: true
+env.observations.critic.foot_pos.clip: null
+env.observations.critic.foot_pos.flatten_history_dim: true
+env.observations.critic.foot_pos.func: !!python/name:exts.flamingo.envs.mdp.observations.ee_pos_rel_to_hip ''
+env.observations.critic.foot_pos.history_length: 0
+env.observations.critic.foot_pos.modifiers: null
+env.observations.critic.foot_pos.noise: null
+env.observations.critic.foot_pos.scale: null
+env.observations.critic.history_length: null
+env.observations.critic.velocity.clip: null
+env.observations.critic.velocity.flatten_history_dim: true
+env.observations.critic.velocity.func: !!python/name:exts.flamingo.envs.mdp.observations.foot_lin_vel_rel ''
+env.observations.critic.velocity.history_length: 0
+env.observations.critic.velocity.modifiers: null
+env.observations.critic.velocity.noise: null
+env.observations.critic.velocity.scale: null
+env.observations.policy.actions.clip: null
+env.observations.policy.actions.flatten_history_dim: true
+env.observations.policy.actions.func: !!python/name:exts.flamingo.envs.mdp.observations.last_actions ''
+env.observations.policy.actions.history_length: 0
+env.observations.policy.actions.modifiers: null
+env.observations.policy.actions.noise: null
+env.observations.policy.actions.scale: null
+env.observations.policy.concatenate_dim: -1
+env.observations.policy.concatenate_terms: true
+env.observations.policy.enable_corruption: true
+env.observations.policy.flatten_history_dim: true
+env.observations.policy.history_length: null
+env.observations.policy.joint_pos.clip: null
+env.observations.policy.joint_pos.flatten_history_dim: true
+env.observations.policy.joint_pos.func: !!python/name:exts.flamingo.envs.mdp.observations.joint_pos_normalized ''
+env.observations.policy.joint_pos.history_length: 0
+env.observations.policy.joint_pos.modifiers: null
+env.observations.policy.joint_pos.noise.func: &id002 !!python/name:isaaclab.utils.noise.noise_model.uniform_noise ''
+env.observations.policy.joint_pos.noise.n_max: 0.01
+env.observations.policy.joint_pos.noise.n_min: -0.01
+env.observations.policy.joint_pos.noise.operation: add
+env.observations.policy.joint_pos.scale: null
+env.observations.policy.joint_vel.clip: null
+env.observations.policy.joint_vel.flatten_history_dim: true
+env.observations.policy.joint_vel.func: !!python/name:exts.flamingo.envs.mdp.observations.joint_vel ''
+env.observations.policy.joint_vel.history_length: 0
+env.observations.policy.joint_vel.modifiers: null
+env.observations.policy.joint_vel.noise.func: *id002
+env.observations.policy.joint_vel.noise.n_max: 1.5
+env.observations.policy.joint_vel.noise.n_min: -1.5
+env.observations.policy.joint_vel.noise.operation: add
+env.observations.policy.joint_vel.scale: null
+env.observations.policy.target_traj.clip: null
+env.observations.policy.target_traj.flatten_history_dim: true
+env.observations.policy.target_traj.func: !!python/name:exts.flamingo.envs.mdp.observations.generated_trajectory_command ''
+env.observations.policy.target_traj.history_length: 0
+env.observations.policy.target_traj.modifiers: null
+env.observations.policy.target_traj.noise: null
+env.observations.policy.target_traj.params.command_name: trajectory
+env.observations.policy.target_traj.scale: null
+env.recorders.dataset_export_dir_path: /tmp/isaaclab/logs
+env.recorders.dataset_export_mode: !!python/object/apply:isaaclab.managers.recorder_manager.DatasetExportMode
+- 1
+env.recorders.dataset_file_handler_class_type: !!python/name:isaaclab.utils.datasets.hdf5_dataset_file_handler.HDF5DatasetFileHandler ''
+env.recorders.dataset_filename: dataset
+env.recorders.export_in_record_pre_reset: true
+env.rerender_on_reset: false
+env.rewards.action_rate.func: !!python/name:exts.flamingo.envs.mdp.rewards.penalize_action_rate_l2 ''
+env.rewards.action_rate.weight: -0.01
+env.rewards.dof_acc.func: !!python/name:isaaclab.envs.mdp.rewards.joint_acc_l2 ''
+env.rewards.dof_acc.weight: -2.5e-07
+env.rewards.dof_vel.func: !!python/name:isaaclab.envs.mdp.rewards.joint_vel_l2 ''
+env.rewards.dof_vel.weight: -0.0001
+env.rewards.joint_power.func: !!python/name:exts.flamingo.envs.mdp.rewards.penalize_joint_power ''
+env.rewards.joint_power.weight: -0.001
+env.rewards.smoothness.func: !!python/name:exts.flamingo.envs.mdp.rewards.action_smoothness_l2 ''
+env.rewards.smoothness.weight: -0.01
+env.rewards.track_ee_traj.func: !!python/name:exts.flamingo.envs.mdp.rewards.track_ee_trajectory ''
+env.rewards.track_ee_traj.params.command_name: trajectory
+env.rewards.track_ee_traj.weight: 0.3
+env.scene.clone_in_fabric: false
+env.scene.env_spacing: 2.5
+env.scene.filter_collisions: true
+env.scene.ground.class_type: null
+env.scene.ground.collision_group: 0
+env.scene.ground.debug_vis: false
+env.scene.ground.init_state.pos: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.scene.ground.init_state.rot: !!python/tuple
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+env.scene.ground.prim_path: /World/ground
+env.scene.ground.spawn.color: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.scene.ground.spawn.copy_from_source: true
+env.scene.ground.spawn.func: !!python/name:isaaclab.sim.spawners.from_files.from_files.spawn_ground_plane ''
+env.scene.ground.spawn.physics_material.compliant_contact_damping: 0.0
+env.scene.ground.spawn.physics_material.compliant_contact_stiffness: 0.0
+env.scene.ground.spawn.physics_material.dynamic_friction: 0.5
+env.scene.ground.spawn.physics_material.friction_combine_mode: average
+env.scene.ground.spawn.physics_material.func: &id003 !!python/name:isaaclab.sim.spawners.materials.physics_materials.spawn_rigid_body_material ''
+env.scene.ground.spawn.physics_material.restitution: 0.0
+env.scene.ground.spawn.physics_material.restitution_combine_mode: average
+env.scene.ground.spawn.physics_material.static_friction: 0.5
+env.scene.ground.spawn.semantic_tags: null
+env.scene.ground.spawn.size: !!python/tuple
+- 100.0
+- 100.0
+env.scene.ground.spawn.usd_path: https://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/5.0/Isaac/Environments/Grid/default_environment.usd
+env.scene.ground.spawn.visible: true
+env.scene.lazy_sensor_update: true
+env.scene.light.class_type: null
+env.scene.light.collision_group: 0
+env.scene.light.debug_vis: false
+env.scene.light.init_state.pos: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.scene.light.init_state.rot: !!python/tuple
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+env.scene.light.prim_path: /World/light
+env.scene.light.spawn.angle: 0.53
+env.scene.light.spawn.color: !!python/tuple
+- 0.75
+- 0.75
+- 0.75
+env.scene.light.spawn.color_temperature: 6500.0
+env.scene.light.spawn.copy_from_source: true
+env.scene.light.spawn.enable_color_temperature: false
+env.scene.light.spawn.exposure: 0.0
+env.scene.light.spawn.func: !!python/name:isaaclab.sim.spawners.lights.lights.spawn_light ''
+env.scene.light.spawn.intensity: 3000.0
+env.scene.light.spawn.normalize: false
+env.scene.light.spawn.prim_type: DistantLight
+env.scene.light.spawn.semantic_tags: null
+env.scene.light.spawn.visible: true
+env.scene.num_envs: 4096
+env.scene.replicate_physics: true
+env.scene.robot.actuator_value_resolution_debug_print: false
+env.scene.robot.actuators.legs: !!python/object:exts.flamingo.envs.mdp.leg_actuator.LegDCMotorCfg
+  armature: 0.0
+  class_type: !!python/name:exts.flamingo.envs.mdp.leg_actuator.LegDCMotor ''
+  damping: 1.0
+  dynamic_friction: null
+  effort_limit: null
+  effort_limit_sim: null
+  encoder_bias: 0.0
+  friction: 0.0
+  joint_names_expr:
+  - .*
+  max_delay: 2
+  saturation_effort: 1000.0
+  stiffness: 40.0
+  velocity_limit: 1000.0
+  velocity_limit_sim: null
+  viscous_friction: 0.0
+env.scene.robot.articulation_root_prim_path: null
+env.scene.robot.class_type: !!python/name:isaaclab.assets.articulation.articulation.Articulation ''
+env.scene.robot.collision_group: 0
+env.scene.robot.debug_vis: false
+env.scene.robot.init_state.ang_vel: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.scene.robot.init_state.joint_pos.FL_calf_joint: -1.57
+env.scene.robot.init_state.joint_pos.FL_thigh_joint: 0.717
+env.scene.robot.init_state.joint_vel..*: 0.0
+env.scene.robot.init_state.lin_vel: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.scene.robot.init_state.pos: !!python/tuple
+- 0.0
+- 0.0
+- 1.0
+env.scene.robot.init_state.rot: !!python/tuple
+- 1.0
+- 0.0
+- 0.0
+- 0.0
+env.scene.robot.prim_path: /World/envs/env_.*/Robot
+env.scene.robot.soft_joint_pos_limit_factor: 1.0
+env.scene.robot.spawn.activate_contact_sensors: true
+env.scene.robot.spawn.articulation_props.articulation_enabled: null
+env.scene.robot.spawn.articulation_props.enabled_self_collisions: false
+env.scene.robot.spawn.articulation_props.fix_root_link: true
+env.scene.robot.spawn.articulation_props.sleep_threshold: null
+env.scene.robot.spawn.articulation_props.solver_position_iteration_count: 4
+env.scene.robot.spawn.articulation_props.solver_velocity_iteration_count: 0
+env.scene.robot.spawn.articulation_props.stabilization_threshold: null
+env.scene.robot.spawn.asset_path: /home/jaeyeolkim/Flamingo/exts/flamingo/tasks/envs/urdf/Leg_v2.urdf
+env.scene.robot.spawn.collider_type: convex_hull
+env.scene.robot.spawn.collision_from_visuals: false
+env.scene.robot.spawn.collision_props: null
+env.scene.robot.spawn.convert_mimic_joints_to_normal_joints: false
+env.scene.robot.spawn.copy_from_source: true
+env.scene.robot.spawn.deformable_props: null
+env.scene.robot.spawn.fix_base: true
+env.scene.robot.spawn.fixed_tendons_props: null
+env.scene.robot.spawn.force_usd_conversion: false
+env.scene.robot.spawn.func: !!python/name:isaaclab.sim.spawners.from_files.from_files.spawn_from_urdf ''
+env.scene.robot.spawn.joint_drive.drive_type: force
+env.scene.robot.spawn.joint_drive.gains.damping: 0.0
+env.scene.robot.spawn.joint_drive.gains.stiffness: 0.0
+env.scene.robot.spawn.joint_drive.target_type: position
+env.scene.robot.spawn.joint_drive_props: null
+env.scene.robot.spawn.link_density: 0.0
+env.scene.robot.spawn.make_instanceable: true
+env.scene.robot.spawn.mass_props: null
+env.scene.robot.spawn.merge_fixed_joints: true
+env.scene.robot.spawn.replace_cylinders_with_capsules: false
+env.scene.robot.spawn.rigid_props.angular_damping: 0.0
+env.scene.robot.spawn.rigid_props.disable_gravity: false
+env.scene.robot.spawn.rigid_props.enable_gyroscopic_forces: null
+env.scene.robot.spawn.rigid_props.kinematic_enabled: null
+env.scene.robot.spawn.rigid_props.linear_damping: 0.0
+env.scene.robot.spawn.rigid_props.max_angular_velocity: 1000.0
+env.scene.robot.spawn.rigid_props.max_contact_impulse: null
+env.scene.robot.spawn.rigid_props.max_depenetration_velocity: 1.0
+env.scene.robot.spawn.rigid_props.max_linear_velocity: 1000.0
+env.scene.robot.spawn.rigid_props.retain_accelerations: false
+env.scene.robot.spawn.rigid_props.rigid_body_enabled: null
+env.scene.robot.spawn.rigid_props.sleep_threshold: null
+env.scene.robot.spawn.rigid_props.solver_position_iteration_count: null
+env.scene.robot.spawn.rigid_props.solver_velocity_iteration_count: null
+env.scene.robot.spawn.rigid_props.stabilization_threshold: null
+env.scene.robot.spawn.root_link_name: null
+env.scene.robot.spawn.scale: null
+env.scene.robot.spawn.self_collision: false
+env.scene.robot.spawn.semantic_tags: null
+env.scene.robot.spawn.spatial_tendons_props: null
+env.scene.robot.spawn.usd_dir: null
+env.scene.robot.spawn.usd_file_name: null
+env.scene.robot.spawn.visible: true
+env.scene.robot.spawn.visual_material: null
+env.scene.robot.spawn.visual_material_path: material
+env.seed: 0
+env.sim.create_stage_in_memory: false
+env.sim.device: cuda:0
+env.sim.dt: 0.005
+env.sim.enable_scene_query_support: false
+env.sim.gravity: !!python/tuple
+- 0.0
+- 0.0
+- -9.81
+env.sim.physics_material.compliant_contact_damping: 0.0
+env.sim.physics_material.compliant_contact_stiffness: 0.0
+env.sim.physics_material.dynamic_friction: 0.5
+env.sim.physics_material.friction_combine_mode: average
+env.sim.physics_material.func: *id003
+env.sim.physics_material.restitution: 0.0
+env.sim.physics_material.restitution_combine_mode: average
+env.sim.physics_material.static_friction: 0.5
+env.sim.physics_prim_path: /physicsScene
+env.sim.physx.bounce_threshold_velocity: 0.5
+env.sim.physx.enable_ccd: false
+env.sim.physx.enable_enhanced_determinism: false
+env.sim.physx.enable_stabilization: false
+env.sim.physx.friction_correlation_distance: 0.025
+env.sim.physx.friction_offset_threshold: 0.04
+env.sim.physx.gpu_collision_stack_size: 67108864
+env.sim.physx.gpu_found_lost_aggregate_pairs_capacity: 33554432
+env.sim.physx.gpu_found_lost_pairs_capacity: 2097152
+env.sim.physx.gpu_heap_capacity: 67108864
+env.sim.physx.gpu_max_num_partitions: 8
+env.sim.physx.gpu_max_particle_contacts: 1048576
+env.sim.physx.gpu_max_rigid_contact_count: 8388608
+env.sim.physx.gpu_max_rigid_patch_count: 163840
+env.sim.physx.gpu_max_soft_body_contacts: 1048576
+env.sim.physx.gpu_temp_buffer_capacity: 16777216
+env.sim.physx.gpu_total_aggregate_pairs_capacity: 2097152
+env.sim.physx.max_position_iteration_count: 255
+env.sim.physx.max_velocity_iteration_count: 255
+env.sim.physx.min_position_iteration_count: 1
+env.sim.physx.min_velocity_iteration_count: 0
+env.sim.physx.solver_type: 1
+env.sim.render.antialiasing_mode: null
+env.sim.render.carb_settings: null
+env.sim.render.dlss_mode: null
+env.sim.render.enable_ambient_occlusion: null
+env.sim.render.enable_direct_lighting: null
+env.sim.render.enable_dl_denoiser: null
+env.sim.render.enable_dlssg: null
+env.sim.render.enable_global_illumination: null
+env.sim.render.enable_reflections: null
+env.sim.render.enable_shadows: null
+env.sim.render.enable_translucency: null
+env.sim.render.rendering_mode: null
+env.sim.render.samples_per_pixel: null
+env.sim.render_interval: 4
+env.sim.use_fabric: true
+env.terminations.time_out.func: !!python/name:isaaclab.envs.mdp.terminations.time_out ''
+env.terminations.time_out.time_out: true
+env.ui_window_class_type: !!python/name:isaaclab.envs.ui.manager_based_rl_env_window.ManagerBasedRLEnvWindow ''
+env.viewer.asset_name: null
+env.viewer.body_name: null
+env.viewer.cam_prim_path: /OmniverseKit_Persp
+env.viewer.env_index: 0
+env.viewer.eye: !!python/tuple
+- 7.5
+- 7.5
+- 7.5
+env.viewer.lookat: !!python/tuple
+- 0.0
+- 0.0
+- 0.0
+env.viewer.origin_type: world
+env.viewer.resolution: !!python/tuple
+- 1280
+- 720
+env.wait_for_textures: true
+env.xr: null

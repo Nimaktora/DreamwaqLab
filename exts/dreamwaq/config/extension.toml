@@ -1,0 +1,27 @@
+[package]
+
+# Semantic Versioning is used: https://semver.org/
+version = "1.0.0"
+
+# Description
+category = "isaaclab"
+readme  = "README.md"
+
+[dependencies]
+"isaaclab" = {}
+"isaaclab_assets" = {}
+"isaaclab_tasks" = {}
+
+# NOTE: Add additional dependencies here
+
+[[python.module]]
+name = "flamingo"
+
+[isaaclab_settings]
+# Uncomment and list any apt dependencies here.
+#       If none, leave it commented out.
+# apt_deps = ["example_package"]
+# Uncomment and provide path to a ros_ws
+#       with rosdeps to be installed. If none,
+#       leave it commented out.
+# ros_ws = "path/from/extension_root/to/ros_ws"

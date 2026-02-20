@@ -1,0 +1,14 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:conda",
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "python-envs.pythonProjects": [],
+
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/_isaaclab/source/isaaclab_rl",
+        "${workspaceFolder}/_isaaclab/source/isaaclab",
+        "${workspaceFolder}/_isaaclab/source/isaaclab_mimic",
+        "${workspaceFolder}/_isaaclab/source/isaaclab_tasks",
+        "${workspaceFolder}/_isaaclab/source/isaaclab_assets",
+    ],
+  "python.analysis.autoSearchPaths": true,
+}
