@@ -49,9 +49,9 @@ from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
 try:
-    from exts.dreamwaq.learning.runners.dwaq_on_policy_runner import LegOnPolicyRunner
+    from exts.dreamwaq.learning.runners.dwaq_on_policy_runner import DwaqOnPolicyRunner
 except ImportError:
-    from flamingo.learning.runners.leg_on_policy_runner import LegOnPolicyRunner
+    from exts.dreamwaq.learning.runners.dwaq_on_policy_runner import DwaqOnPolicyRunner
 
 
 # ==============================================================================
@@ -145,6 +145,8 @@ def main():
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
 
     # 3. Environment Creation
+    from exts.dreamwaq.tasks import registry
+    task_config = registry[args_cli.task]
     env = gym.make(args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None)
     
     if args_cli.video:
@@ -156,15 +158,17 @@ def main():
         }
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
-    # RSL-RL 호환 래퍼 적용
-    env = RslRlVecEnvWrapper(env)
+    # # RSL-RL 호환 래퍼 적용
+    # env = RslRlVecEnvWrapper(env)
     
-    # [핵심] PlayWrapper 적용 (TensorDict -> Tuple 변환)
-    env = PlayWrapper(env)
+    # # [핵심] PlayWrapper 적용 (TensorDict -> Tuple 변환)
+    # env = PlayWrapper(env)
+    for wrapper in task_config.env_wrappers:
+        env = wrapper(env, args_cli=args_cli)
 
     # 4. Runner Initialization
     # PlayWrapper가 (obs, extras) 형태로 변환해주므로 에러 해결됨
-    runner = LegOnPolicyRunner(env, agent_cfg, log_dir=None, device=args_cli.device)
+    runner = DwaqOnPolicyRunner(env, agent_cfg, log_dir=None, device=args_cli.device)
     
     runner.load(resume_path, load_optimizer=False)
     runner.alg.actor_critic.eval()
@@ -206,7 +210,7 @@ def main():
             actor_obs_input = obs_norm
 
             # (E) Action
-            actions = runner.alg.actor_critic.act_inference(actor_obs_input)
+            actions = runner.alg.actor_critic.act_inference(actor_obs_input, obs_history_flat)
             
             # (F) Step
             next_obs, rewards, dones, infos = env.step(actions)

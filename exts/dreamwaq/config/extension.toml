@@ -15,7 +15,7 @@ readme  = "README.md"
 # NOTE: Add additional dependencies here
 
 [[python.module]]
-name = "flamingo"
+name = "dreamwaq"
 
 [isaaclab_settings]
 # Uncomment and list any apt dependencies here.

@@ -107,8 +107,13 @@ def disturbance_force(
     return asset._external_force_b.view(env.num_envs, -1) # type: ignore
 
 def height_scan(
-        env: ManagerBasedRLEnv, 
-        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-        ) -> torch.Tensor:
-    asset: Articulation = env.scene[asset_cfg.name]
-    return asset.data.root_state_w[:, 2:3]
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    offset: float = 0.5,
+) -> torch.Tensor:
+    sensor: RayCaster = env.scene.sensors[sensor_cfg.name]
+    # height = sensor_height - hit_point_z - offset
+    return sensor.data.pos_w[:, 2].unsqueeze(1) - sensor.data.ray_hits_w[..., 2] - offset
+
+
+

@@ -16,7 +16,7 @@ from isaaclab.utils import configclass
 import isaaclab.terrains as terrain_gen
 from isaaclab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 
-from unitree import UNITREE_GO1_CFG
+from exts.dreamwaq.tasks.envs.unitree import UNITREE_GO1_CFG
 import isaaclab.envs.mdp as mdp_std
 import exts.dreamwaq.envs.mdp as mdp
 from exts.dreamwaq.utils.terrains_cfg import RailwayTracksTerrainCfg
@@ -43,7 +43,6 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     difficulty_range=(0.5, 0.9),
     use_cache=True,
     sub_terrains={
-        "flat": terrain_gen.MeshPlaneTerrainCfg(proportion=0.1),
         "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
             proportion=0.1, noise_range=(0.01, 0.06), noise_step=0.01, border_width=0.25
         ),
@@ -116,7 +115,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
     # sensors
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.5)),
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.3)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=False,
@@ -124,10 +123,10 @@ class RobotSceneCfg(InteractiveSceneCfg):
     )
     contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/base.*", history_length=3, track_air_time=True)
     # lights
-    light = AssetBaseCfg(
-        prim_path="/World/light",
-        spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
-    )
+    # light = AssetBaseCfg(
+    #     prim_path="/World/light",
+    #     spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
+    # )
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
         spawn=sim_utils.DomeLightCfg(
@@ -296,8 +295,12 @@ class ObservationsCfg:
         last_action = ObsTerm(func=mdp.last_action, clip=(-100, 100))
 
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100))
-        height_scanner = ObsTerm(func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+        height_scanner = ObsTerm(
+            func=mdp.height_scan,
+            params={
+                "sensor_cfg": SceneEntityCfg("height_scanner"),
+                "offset": 0.5,
+            },
             clip=(-1.0, 5.0),
         )
 
@@ -331,10 +334,14 @@ class RewardsCfg:
     orientation_gravity = RewTerm(func=mdp.penalty_orientation_gravity, weight=-0.2)
     joint_accel = RewTerm(func=mdp.penalty_joint_accel, weight=-2.5e-7)
     joint_power = RewTerm(func=mdp.penalty_joint_power, weight=-2e-5)
-    body_height = RewTerm(func=mdp.penalty_body_height, weight=-1.0)
-    foot_clearance = RewTerm(func=mdp.penalty_foot_clearance, weight=-0.01)
+    body_height = RewTerm(
+    func=mdp.penalty_body_height, weight=-1.0, params={"h_des": 0.30})
+    foot_clearance = RewTerm(func=mdp.penalty_foot_clearance, weight=-0.01,
+                             params={
+                                 "foot_body_names": ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
+                                 "clearance_des": [0.05, 0.05, 0.05, 0.05],})
     action_rate = RewTerm(func=mdp.penalty_action_rate, weight=-0.01)
-    action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01)
+    action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
     power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-5)
 
 @configclass

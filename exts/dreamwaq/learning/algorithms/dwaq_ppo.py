@@ -86,14 +86,17 @@ class DwaqPPO:
                      num_transitions_per_env,
                      actor_obs_shape,
                      critic_obs_shape,
+                     obs_hist_shape, 
                      action_shape):
-
+        action_shape = tuple(int(x) for x in action_shape)
         self.storage = DwaqRolloutStorage(num_envs,
                                       num_transitions_per_env,
                                       actor_obs_shape,
                                       critic_obs_shape,
+                                      obs_hist_shape, 
                                       action_shape,
                                       self.device)
+
 
     # why deactivated ? 
     def test_mode(self):
@@ -106,7 +109,8 @@ class DwaqPPO:
         # if self.actor_critic.is_recurrent:
         #     self.transition.hidden_states = self.actor_critic.get_hidden_states()
         # Compute the actions and values
-        self.transition.actions = self.actor_critic.act(obs,obs_history).detach()
+        # self.transition.actions = self.actor_critic.act(obs).detach()
+        self.transition.actions = self.actor_critic.act(obs, obs_history=obs_history).detach()
         self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
@@ -150,7 +154,8 @@ class DwaqPPO:
             advantages_batch, returns_batch, old_actions_log_prob_batch, \
             old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
 
-            self.actor_critic.act(actor_obs_batch, obs_hist_batch, masks=masks_batch, hidden_states=hid_states_batch[0]) # ActorCriticDwaq.act 호출, update, 위에 있는 함수는 rollout용
+            # self.actor_critic.act(actor_obs_batch, obs_hist_batch, masks=masks_batch, hidden_states=hid_states_batch[0]) # ActorCriticDwaq.act 호출, update, 위에 있는 함수는 rollout용
+            self.actor_critic.act(actor_obs_batch, obs_hist_batch)
             actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch) # log probability
             value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
             mu_batch = self.actor_critic.action_mean

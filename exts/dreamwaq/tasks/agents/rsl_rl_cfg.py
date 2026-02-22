@@ -40,16 +40,16 @@ ppo_algo_cfg = RslRlPpoAlgorithmCfg(
 #         SINGLE LEG WAQ
 # =============================
 @configclass
-class SingleLegWaqPpoRunnerCfg(RslRlOnPolicyRunnerCfg):
+class DwaqPpoRunnerCfg(RslRlOnPolicyRunnerCfg):
     """Configuration for Single Leg WAQ (PPO + CENet) runner."""
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 50
-    experiment_name = "single_leg"
+    experiment_name = "dwaq"
     empirical_normalization = False  # Runner 내부에서 RMS를 직접 관리하므로 False
     
     policy = RslRlPpoPolicyCfg(
-        class_name="ActorCriticLeg",  # 문서화용 (실제 Runner에선 hardcoded class 사용)
+        class_name="ActorCriticDwaq",  # 문서화용 (실제 Runner에선 hardcoded class 사용)
         init_noise_std=1.0,
         actor_hidden_dims=[512, 256, 128],
         critic_hidden_dims=[512, 256, 128],

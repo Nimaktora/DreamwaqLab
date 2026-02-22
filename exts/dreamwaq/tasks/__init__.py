@@ -7,9 +7,9 @@ import gymnasium as gym
 from exts.dreamwaq.envs import wrappers
 from exts.dreamwaq.learning import runners
 
-from exts.dreamwaq.tasks.envs.env_cfg import SingleLegRoughEnvCfg, SingleLegRoughEnvEvalCfg
-from exts.dreamwaq.tasks.agents.rsl_rl_cfg import SingleLegWaqPpoRunnerCfg
-from exts.dreamwaq.learning.runners.dwaq_on_policy_runner import LegOnPolicyRunner
+from exts.dreamwaq.tasks.envs.env_cfg import RobotEnvCfg, EvalRobotEnvCfg, PlayRobotEnvCfg
+from exts.dreamwaq.tasks.agents.rsl_rl_cfg import DwaqPpoRunnerCfg
+from exts.dreamwaq.learning.runners.dwaq_on_policy_runner import DwaqOnPolicyRunner
 from exts.dreamwaq.tasks.algorithms import RslRlOnPolicyRunnerCfg
 
 @dataclass
@@ -23,15 +23,20 @@ class TaskConfig:
 
 registry = {
 
-    "one_leg": TaskConfig(
-        env_cfg_entry_point=SingleLegRoughEnvCfg,
-        rsl_rl_cfg_entry_point=SingleLegWaqPpoRunnerCfg,
-        runner=LegOnPolicyRunner,
+    "dwaq": TaskConfig(
+        env_cfg_entry_point=RobotEnvCfg,
+        rsl_rl_cfg_entry_point=DwaqPpoRunnerCfg,
+        runner=DwaqOnPolicyRunner,
     ),
-    "one_leg_eval": TaskConfig(
-        env_cfg_entry_point=SingleLegRoughEnvEvalCfg,
-        rsl_rl_cfg_entry_point=SingleLegWaqPpoRunnerCfg,
-        runner=LegOnPolicyRunner,
+    "dwaq_eval": TaskConfig(
+        env_cfg_entry_point=EvalRobotEnvCfg,
+        rsl_rl_cfg_entry_point=DwaqPpoRunnerCfg,
+        runner=DwaqOnPolicyRunner,
+    ),
+    "dwaq_play": TaskConfig(
+        env_cfg_entry_point=PlayRobotEnvCfg,
+        rsl_rl_cfg_entry_point=DwaqPpoRunnerCfg,
+        runner=DwaqOnPolicyRunner,
     ),
 }
 

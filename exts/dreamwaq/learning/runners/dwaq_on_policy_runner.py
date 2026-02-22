@@ -42,6 +42,7 @@ class DwaqOnPolicyRunner:
 
         # IMU + command + jointstates + prevaction
         self.proprio_dim = 45
+        self.cenet_out_dim = 19
         self.history_len = 5
 
         # observation, body vel, disturbance force, height map scan
@@ -53,11 +54,22 @@ class DwaqOnPolicyRunner:
         self.height_map_scan_dim = 3
 
 
-        self.num_actor_obs = self.proprio_dim
-        self.num_critic_obs = self.proprio_dim + self.est_vel_dim + self.disturb_force_dim + self.height_map_scan_dim
+        # self.num_actor_obs = self.proprio_dim
+        # self.num_critic_obs = self.proprio_dim + self.est_vel_dim + self.disturb_force_dim + self.height_map_scan_dim
+        obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
+
+        # env -> critic obs
+        if "observations" in extras and "critic" in extras["observations"]:
+            critic0 = extras["observations"]["critic"]
+        else:
+            raise RuntimeError("thereis no extras['observations']['critic']. check wrapper setting.")
+
+        self.num_actor_obs = obs.shape[1]
+        self.num_critic_obs = critic0.shape[1]   # ★ 여기 중요
         self.num_actions = self.env.num_actions
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
+        self.obs_hist_shape = (self.history_len * self.proprio_dim,)
 
         # == 3. Initialize Modules ==
         self.actor_critic = ActorCriticDwaq(
@@ -66,12 +78,23 @@ class DwaqOnPolicyRunner:
         self.alg = DwaqPPO(self.actor_critic, device=self.device, **self.alg_cfg)
 
         # == 4. Storage Initialization ==
+        # 1) action_shape -> tuple
+        if hasattr(self.env, "action_space") and hasattr(self.env.action_space, "shape"):
+            action_shape = tuple(int(x) for x in self.env.action_space.shape)  # ex: (12,)
+        else:
+            # fallback
+            action_shape = (int(self.env.num_actions),)
+
+        # print("[DEBUG] action_shape:", action_shape, type(action_shape))
+
+        # 2) init_storage
         self.alg.init_storage(
             self.env.num_envs,
             self.num_steps_per_env,
-            [self.num_actor_obs],
-            [self.num_critic_obs], 
-            [self.env.num_actions],
+            (self.num_actor_obs,),
+            (self.num_critic_obs,),
+            self.obs_hist_shape, 
+            action_shape,
         )
 
 
@@ -215,21 +238,19 @@ class DwaqOnPolicyRunner:
             start = time.time()
             
             # --- Rollout Loop ---
+            prev_critic_obs_input = torch.zeros(self.env.num_envs, self.num_critic_obs, device=self.device)
             with torch.inference_mode():
                 for i in range(self.num_steps_per_env):
-                    
+                    # critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
+                    critic_obs_input = priv_obs_norm
+                    actor_obs_input = obs_norm
                     if self.obs_rms is not None:
                          history_norm = (self.obs_history_buffer - self.obs_rms.mean) / torch.sqrt(self.obs_rms.var + 1e-6)
                          obs_history_flat = history_norm.view(self.env.num_envs, -1)
                     else:
                          obs_history_flat = self.obs_history_buffer.view(self.env.num_envs, -1)
 
-                    
-
-
-                    critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
-                    actor_obs_input = obs_norm
-                    actions = self.alg.act(actor_obs_input, critic_obs_input)
+                    actions = self.alg.act(actor_obs_input, critic_obs_input, prev_critic_obs_input, obs_history_flat)
 
                     next_obs_dict, rewards, dones, infos = self.env.step(actions)
                     
@@ -290,15 +311,15 @@ class DwaqOnPolicyRunner:
                             ep_infos.append(infos["episode"])
                         elif "log" in infos:
                             ep_infos.append(infos["log"])
-
+                    prev_critic_obs_input = critic_obs_input
                 stop = time.time()
                 collection_time = stop - start
                 
-                critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
-                self.alg.compute_returns(critic_obs_input)
+                # critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
+                self.alg.compute_returns(priv_obs_norm)
 
             # Update Phase
-            mean_value_loss, mean_surrogate_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_autoenc_loss = self.alg.update()
             stop = time.time()
             learn_time = stop - start
 

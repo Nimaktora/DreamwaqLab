@@ -107,12 +107,9 @@ class UnitreeUrdfFileCfg(sim_utils.UrdfFileCfg):
 #     decimation = 4
 
 UNITREE_GO1_CFG = UnitreeArticulationCfg(
-    # spawn=sim_utils.UsdFileCfg(
-    # usd_path=f"{ISAACLAB_NUCLEUS_DIR}/Robots/Unitree/Go1/go1.usd",
     spawn=UnitreeUrdfFileCfg(
-        asset_path=f"{UNITREE_ROS_DIR}/robots/go2_description/urdf/go2_description.urdf", # TODO CHECK CHECK CHECK
-    ),
-        activate_contact_sensors=True,
+        asset_path="/home/jaeyeolkim/Documents/GitHub/DreamwaqLab/exts/dreamwaq/tasks/envs/urdf/go1.urdf",
+        activate_contact_sensors=True, 
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             retain_accelerations=False,
@@ -123,8 +120,12 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
             max_depenetration_velocity=1.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False, solver_position_iteration_count=4, solver_velocity_iteration_count=0
+            enabled_self_collisions=False,
+            solver_position_iteration_count=4,
+            solver_velocity_iteration_count=0,
         ),
+    ),
+
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.4),
         joint_pos={
@@ -136,18 +137,19 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
         },
         joint_vel={".*": 0.0},
     ),
+
     soft_joint_pos_limit_factor=0.9,
     # actuators={
     #     "base_legs": GO1_ACTUATOR_CFG,
     # },
     actuators={
-        ActuatorBaseCfg(
-        joint_names_expr=[".*"],
-        stiffness=28.0,
-        damping=0.7,
-        friction=0.01,
+        "all_joints": ImplicitActuatorCfg(
+            joint_names_expr=[".*"],
+            stiffness=28.0,
+            damping=0.7,
+            friction=0.01,
         ),
-    }
+    },
 )
 """GO1_ACTUATOR_CFG -> Configuration of Unitree Go1 using MLP-based actuator model.
     but this setting is customized by JaeyeolKim, based on reference. 

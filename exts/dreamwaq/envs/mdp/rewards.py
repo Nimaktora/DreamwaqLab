@@ -204,7 +204,7 @@ def penalty_foot_clearance(
     for name in foot_body_names:
         ids = robot.find_bodies(name)
         if len(ids) > 0:
-            foot_ids.append(int(ids[0]))
+            foot_ids.append(int(ids[0][0]))
 
     if len(foot_ids) == 0:
         ids = robot.find_bodies(".*foot.*")

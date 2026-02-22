@@ -65,6 +65,7 @@ class DwaqRolloutStorage:
 
         self.actor_obs_shape = actor_obs_shape
         self.critic_obs_shape = critic_obs_shape
+        actions_shape = (12,)
         self.actions_shape = actions_shape
 
         # Core
@@ -80,6 +81,9 @@ class DwaqRolloutStorage:
         self.prev_critic_obs = torch.zeros(num_transitions_per_env, num_envs, *critic_obs_shape, device=self.device)
         self.observation_history = torch.zeros(num_transitions_per_env, num_envs, *obs_hist_shape, device=self.device)
         self.rewards = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device)
+        # print("[DEBUG] actions_shape raw:", actions_shape, type(actions_shape))
+        # if isinstance(actions_shape, (list, tuple)):
+        #     print("[DEBUG] actions_shape elem types:", [type(x) for x in actions_shape])
         self.actions = torch.zeros(num_transitions_per_env, num_envs, *actions_shape, device=self.device)
         self.dones = torch.zeros(num_transitions_per_env, num_envs, 1, device=self.device).byte()
 
@@ -105,6 +109,8 @@ class DwaqRolloutStorage:
             raise AssertionError("Rollout buffer overflow")
         self.actor_observations[self.step].copy_(transition.actor_observations)
         self.critic_observations[self.step].copy_(transition.critic_observations)
+        self.prev_critic_obs[self.step].copy_(transition.prev_critic_obs)
+        self.observation_history[self.step].copy_(transition.observation_history)
 
         # if self.privileged_observations is not None:
         #     # self.observations[self.step].copy_(transition.critic_observations)
