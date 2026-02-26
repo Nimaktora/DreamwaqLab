@@ -88,7 +88,7 @@ class ActorCriticDwaq(nn.Module):
         self.std = nn.Parameter(init_noise_std * torch.ones(num_actions))
         self.distribution = None
         # disable args validation for speedup
-        Normal.set_default_validate_args = False
+        Normal.set_default_validate_args(False)
         
         # seems that we get better performance without init
         # self.init_memory_weights(self.memory_a, 0.001, 0.)
@@ -133,6 +133,7 @@ class ActorCriticDwaq(nn.Module):
 
     # (important) Reparameterization Trick
     def reparameterise(self,mean,logvar):
+        logvar = torch.clamp(logvar, -20, 3)
         var = torch.exp(logvar*0.5)
         code_temp = torch.randn_like(var)
         code = mean + var*code_temp
@@ -142,12 +143,14 @@ class ActorCriticDwaq(nn.Module):
         distribution = self.encoder(obs_history)
         mean_latent = self.encode_mean_latent(distribution)
         logvar_latent = self.encode_logvar_latent(distribution)
+        logvar_latent = torch.clamp(logvar_latent, -20, 4)
         # var = torch.exp(logvar_latent*0.5)
         # code_temp = torch.randn_like(var)
         # code = mean_latent + var*code_temp
         # print("latent : ",code[0])
         mean_vel = self.encode_mean_vel(distribution)
         logvar_vel = self.encode_logvar_vel(distribution)
+        logvar_vel = torch.clamp(logvar_vel, -20, 4)
         code_latent = self.reparameterise(mean_latent,logvar_latent)
         code_vel = self.reparameterise(mean_vel,logvar_vel)
         code = torch.cat((code_vel,code_latent),dim=-1)
@@ -169,16 +172,18 @@ class ActorCriticDwaq(nn.Module):
     def is_invalid(self, tensor):
         return torch.isnan(tensor).any() or torch.isinf(tensor).any()
     
-    def _build_actor_input(self, obs_cur, obs_history):
-        code, _, _, _, _, _, _ = self.cenet_forward(obs_history)  # (N,19)
-        return torch.cat([code, obs_cur], dim=-1)  
+    def _build_actor_input(self, obs_cur, obs_history, detach_code=True):
+        code, _, _, _, _, _, _ = self.cenet_forward(obs_history) # (N,19)
+        if detach_code:
+            code = code.detach()
+        return torch.cat([code, obs_cur], dim=-1)
 
     def update_distribution(self, observations, obs_history=None):
         if obs_history is None:
             raise RuntimeError("obs_history is required to build 45+19 actor input.")
         actor_in = self._build_actor_input(observations, obs_history)
         mean = self.actor(actor_in)
-        self.distribution = Normal(mean, mean * 0. + self.std)
+        self.distribution = Normal(mean, self.std)
         
     def act(self, observations, obs_history=None, **kwargs):
         self.update_distribution(observations, obs_history=obs_history)

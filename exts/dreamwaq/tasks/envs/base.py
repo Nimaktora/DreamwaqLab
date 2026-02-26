@@ -57,7 +57,7 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
         ),
         "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
             proportion=0.1,
-            step_height_range=(0.05, 0.18),
+            step_height_range=(0.05, 0.23),
             step_width=0.3,
             platform_width=3.0,
             border_width=1.0,
@@ -65,7 +65,7 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
         ),
         "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
             proportion=0.1,
-            step_height_range=(0.05, 0.18),
+            step_height_range=(0.05, 0.23),
             step_width=0.3,
             platform_width=3.0,
             border_width=1.0,
@@ -252,24 +252,47 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # observation terms (order preserved)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, clip=(-100, 100), noise=Unoise(n_min=-0.2, n_max=0.2))
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100), noise=Unoise(n_min=-0.05, n_max=0.05))
+        base_ang_vel = ObsTerm(
+            func=mdp.body_ang_vel,  # was: mdp.base_ang_vel
+            scale=0.2,
+            clip=(-100, 100),
+            noise=Unoise(n_min=-0.2, n_max=0.2),
+        )  # :contentReference[oaicite:4]{index=4}
+
+        projected_gravity = ObsTerm(
+            func=mdp.gravity,  # was: mdp.projected_gravity
+            clip=(-100, 100),
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+        )  # :contentReference[oaicite:5]{index=5}
+
         velocity_commands = ObsTerm(
-            func=mdp.generated_commands, clip=(-100, 100), params={"command_name": "base_velocity"}
+            func=mdp.command,  # was: mdp.generated_commands
+            params={"command_name": "base_velocity"},  # command(env, command_name) :contentReference[oaicite:6]{index=6}
+            clip=(-100, 100),
         )
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, clip=(-100, 100), noise=Unoise(n_min=-0.01, n_max=0.01))
+
+        joint_pos_rel = ObsTerm(
+            func=mdp.joint_pos_normalized,  # was: mdp.joint_pos_rel
+            clip=(-100, 100),
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+        )  # :contentReference[oaicite:7]{index=7}
+
         joint_vel_rel = ObsTerm(
-            func=mdp.joint_vel_rel, scale=0.05, clip=(-100, 100), noise=Unoise(n_min=-1.5, n_max=1.5)
-        )
-        last_action = ObsTerm(func=mdp.last_action, clip=(-100, 100))
+            func=mdp.joint_vel,  # was: mdp.joint_vel_rel
+            scale=0.05,
+            clip=(-100, 100),
+            noise=Unoise(n_min=-1.5, n_max=1.5),
+        )  # :contentReference[oaicite:8]{index=8}
+
+        last_action = ObsTerm(
+            func=mdp.prev_actions,  # was: mdp.last_action
+            clip=(-100, 100),
+        )  # :contentReference[oaicite:9]{index=9}
 
         def __post_init__(self):
-            # self.history_length = 5
             self.enable_corruption = True
             self.concatenate_terms = True
 
-    # observation groups
     policy: PolicyCfg = PolicyCfg()
 
 # =============================================================================
@@ -283,18 +306,29 @@ class ObservationsCfg:
     class CriticCfg(ObsGroup):
         """Observations for critic group."""
 
-        
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, scale=0.2, clip=(-100, 100))
-        projected_gravity = ObsTerm(func=mdp.projected_gravity, clip=(-100, 100))
+        # policy obs (no noise by default for critic)
+        base_ang_vel = ObsTerm(func=mdp.body_ang_vel, scale=0.2, clip=(-100, 100))  # :contentReference[oaicite:10]{index=10}
+        projected_gravity = ObsTerm(func=mdp.gravity, clip=(-100, 100))             # :contentReference[oaicite:11]{index=11}
         velocity_commands = ObsTerm(
-            func=mdp.generated_commands, clip=(-100, 100), params={"command_name": "base_velocity"}
-        )
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_rel, clip=(-100, 100))
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel_rel, scale=0.05, clip=(-100, 100))
-        joint_effort = ObsTerm(func=mdp.joint_effort, scale=0.01, clip=(-100, 100))
-        last_action = ObsTerm(func=mdp.last_action, clip=(-100, 100))
+            func=mdp.command,
+            params={"command_name": "base_velocity"},
+            clip=(-100, 100),
+        )  # :contentReference[oaicite:12]{index=12}
+        joint_pos_rel = ObsTerm(func=mdp.joint_pos_normalized, clip=(-100, 100))    # :contentReference[oaicite:13]{index=13}
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel, scale=0.05, clip=(-100, 100))   # :contentReference[oaicite:14]{index=14}
+        last_action = ObsTerm(func=mdp.prev_actions, clip=(-100, 100))              # :contentReference[oaicite:15]{index=15}
 
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, clip=(-100, 100))
+        # privileged obs
+        base_lin_vel = ObsTerm(
+            func=mdp.body_vel,  # was: mdp.base_lin_vel
+            clip=(-100, 100),
+        )  # :contentReference[oaicite:16]{index=16}
+
+        disturbance_force = ObsTerm(
+            func=mdp.disturbance_force,
+            clip=(-100, 100),
+        )  # :contentReference[oaicite:17]{index=17}
+
         height_scanner = ObsTerm(
             func=mdp.height_scan,
             params={
@@ -302,12 +336,12 @@ class ObservationsCfg:
                 "offset": 0.5,
             },
             clip=(-1.0, 5.0),
-        )
+        )  # :contentReference[oaicite:18]{index=18}
 
-        # def __post_init__(self):
-        #     self.history_length = 3
+        def __post_init__(self):
+            self.enable_corruption = False
+            self.concatenate_terms = True
 
-    # privileged observations
     critic: CriticCfg = CriticCfg()
 
 

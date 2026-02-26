@@ -51,7 +51,7 @@ class DwaqOnPolicyRunner:
         self.disturb_force_dim = 3
         # self.foot_pos_dim = 3
         # self.ee_error_dim = 2
-        self.height_map_scan_dim = 3
+        self.height_map_scan_dim = 187
 
 
         # self.num_actor_obs = self.proprio_dim
@@ -393,6 +393,7 @@ class DwaqOnPolicyRunner:
 
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
+        self.writer.add_scalar('Loss/cenet', locs['mean_autoenc_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
         self.writer.add_scalar('Perf/total_fps', fps, locs['it'])
 
@@ -409,6 +410,8 @@ class DwaqOnPolicyRunner:
                           f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs['collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
+                          f"""{'CENet loss:':>{pad}} {locs['mean_autoenc_loss']:.4f}\n"""
+                          f"""{'-' * width}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
                           f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n""")

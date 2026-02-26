@@ -182,10 +182,13 @@ class DwaqPPO:
             code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent = self.actor_critic.cenet_forward(obs_hist_batch)
             
             vel_target = prev_critic_obs_batch[:,45:48]
-            decode_target = actor_obs_batch
+            decode_target = actor_obs_batch.detach()
             vel_target.requires_grad = False
             decode_target.requires_grad = False
-            autoenc_loss = (nn.MSELoss()(code_vel,vel_target) + nn.MSELoss()(decode,decode_target) + beta*(-0.5 * torch.sum(1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp())))/self.num_mini_batches
+            autoenc_loss = (nn.MSELoss()(code_vel,vel_target) + nn.MSELoss()(decode,decode_target) \
+                            + beta*(-0.5 * torch.sum(1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp()).mean()))
+            # autoenc_loss = (nn.MSELoss()(code_vel,vel_target) + nn.MSELoss()(decode,decode_target) \
+            #                 + beta*(-0.5 * torch.sum(1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp())))/self.num_mini_batches
             # estimation_loss = (code[:,0:3] - prev_critic_obs_batch[:,45:48]).pow(2).mean()
             # reconst_loss = (decode - obs_batch).pow(2).mean()
             # latent_loss = beta*(-0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp()))/mean.shape[0]
@@ -224,6 +227,7 @@ class DwaqPPO:
         num_updates = self.num_learning_epochs * self.num_mini_batches
         mean_value_loss /= num_updates
         mean_surrogate_loss /= num_updates
+        mean_autoenc_loss /= num_updates
         self.storage.clear()
 
         return mean_value_loss, mean_surrogate_loss, mean_autoenc_loss

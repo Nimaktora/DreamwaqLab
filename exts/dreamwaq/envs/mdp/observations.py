@@ -21,17 +21,21 @@ from isaaclab.sensors import ContactSensor
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
-def _get_robot_indices(asset: Articulation, body_names: list[str] | str) -> list[int]:
-    if isinstance(body_names, str):
-        body_names = [body_names]
-    indices = []
-    for name in body_names:
+
+def _get_body_index(asset: Articulation, body_name_candidates: list[str] | tuple[str, ...] | str) -> int:
+    if isinstance(body_name_candidates, str):
+        body_name_candidates = [body_name_candidates]
+
+    for name in body_name_candidates:
         found = asset.find_bodies(name)
         if len(found) > 0:
-            indices.append(found[0])
-        else:
-            raise ValueError(f"Body name '{name}' not found in asset '{asset.cfg.prim_path}'")
-    return indices
+            return found[0]
+
+    available = getattr(asset.data, "body_names", None)
+    raise ValueError(
+        f"None of base body candidates {list(body_name_candidates)} found in asset '{asset.cfg.prim_path}'. "
+        f"Available bodies: {available}"
+    )
 
 # policy observation : body angular velocity, gravity vector in the body frame, 
 # body velocity command, joint angle, joint angular velocity, and previous action
@@ -46,11 +50,20 @@ def _get_robot_indices(asset: Articulation, body_names: list[str] | str) -> list
 
 
 def body_ang_vel(
-        env: ManagerBasedRLEnv,
-        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-        ) -> torch.Tensor:
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    base_body_names: tuple[str, ...] = ("base", "trunk", "torso", "pelvis", "base_link"),
+) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
-    return (asset.data.body_com_ang_vel_w).view(env.num_envs, -1)
+
+    # 1) prefer explicit root signals if they exist
+    root_ang = getattr(asset.data, "root_ang_vel_w", None)
+    if root_ang is not None:
+        return root_ang.view(env.num_envs, -1)
+
+    # 2) fallback: index into per-body tensor
+    base_idx = _get_body_index(asset, base_body_names)
+    return asset.data.body_com_ang_vel_w[:, base_idx, :].view(env.num_envs, -1)
 
 
 def gravity(
@@ -93,18 +106,33 @@ def prev_actions(
 # Privileged Observations (Fixed for Batch Dimensions)
 # =============================================================================
 def body_vel(
-        env: ManagerBasedRLEnv, 
-        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-        ) -> torch.Tensor:
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    base_body_names: tuple[str, ...] = ("base", "trunk", "torso", "pelvis", "base_link"),
+) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
-    return asset.data.body_lin_vel_w.view(env.num_envs, -1)
+
+    # 1) prefer explicit root signals if they exist
+    root_lin = getattr(asset.data, "root_lin_vel_w", None)
+    if root_lin is not None:
+        return root_lin.view(env.num_envs, -1)
+
+    # 2) fallback: index into per-body tensor
+    base_idx = _get_body_index(asset, base_body_names)
+    return asset.data.body_lin_vel_w[:, base_idx, :].view(env.num_envs, -1)
 
 def disturbance_force(
-        env: ManagerBasedRLEnv, 
-        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-        ) -> torch.Tensor:
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    base_body_names: tuple[str, ...] = ("base", "trunk", "torso", "pelvis", "base_link"),
+) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
-    return asset._external_force_b.view(env.num_envs, -1) # type: ignore
+    force = asset._external_force_b  # type: ignore
+
+    if force.ndim == 2:
+        return force.view(env.num_envs, -1)
+    base_idx = _get_body_index(asset, base_body_names)
+    return force[:, base_idx, :].view(env.num_envs, -1)
 
 def height_scan(
     env: ManagerBasedRLEnv,

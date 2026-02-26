@@ -184,13 +184,13 @@ class RslRlOnPolicyRunnerCfg:
     neptune_project: str = "isaaclab"
     """The neptune project name. Default is "isaaclab"."""
 
-    wandb_project: str = "isaaclab"
+    wandb_project: str = "dreamwaqlab"
     """The wandb project name. Default is "isaaclab"."""
 
-    wandb_entity: str = "amrmousa-m"
+    wandb_entity: str = "JaeyeolKim-test"
     """The wandb project name. Default is "isaaclab"."""
 
-    note: str = ""
+    note: str = "test"
     """The note for the task to be sent to wandb if used."""
 
     ##
