@@ -15,7 +15,7 @@ class RobotEnvCfg(BaseRobotEnvCfg):
         self.scene.terrain.terrain_generator.seed = 0
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
         self.use_graphics = True  # Ensure graphics are enabled for training
-        self.base_velocity = 0.5  # Some default value
+        self.base_velocity = 1.0  # Some default value
         self.debug_vis = True  # Turn on debug visualization for training purposes
 
     def __post_init__(self):
@@ -32,7 +32,7 @@ class PlayRobotEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
         self.use_graphics = True  # Ensure graphics are enabled for training
-        self.base_velocity = 3.0  # Some default value
+        self.base_velocity = 1.0  # Some default value
         self.debug_vis = False  # Turn on debug visualization for training purposes
 
     def __post_init__(self):

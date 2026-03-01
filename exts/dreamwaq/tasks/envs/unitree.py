@@ -142,14 +142,21 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
     # actuators={
     #     "base_legs": GO1_ACTUATOR_CFG,
     # },
+    # action_scale = 0.25,
     actuators={
         "all_joints": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
             stiffness=28.0,
             damping=0.7,
-            friction=0.01,
+            friction=0.01, # 0.01
         ),
     },
+    joint_sdk_names=[
+        "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
+        "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",
+        "RL_hip_joint", "RL_thigh_joint", "RL_calf_joint",
+        "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint",
+    ],
 )
 """GO1_ACTUATOR_CFG -> Configuration of Unitree Go1 using MLP-based actuator model.
     but this setting is customized by JaeyeolKim, based on reference. 

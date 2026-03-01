@@ -152,7 +152,7 @@ def penalty_joint_accel(
         qdd = robot.data.joint_acc
     else:
         print("penalty_joint_acc_error")
-        return
+        return torch.zeros(env.num_envs, device=env.device)
     return torch.sum(qdd * qdd, dim=1)
 
 

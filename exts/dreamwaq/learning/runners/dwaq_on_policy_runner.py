@@ -319,7 +319,7 @@ class DwaqOnPolicyRunner:
                 self.alg.compute_returns(priv_obs_norm)
 
             # Update Phase
-            mean_value_loss, mean_surrogate_loss, mean_autoenc_loss = self.alg.update()
+            mean_value_loss, mean_surrogate_loss, mean_autoenc_loss, vel_loss, recon_loss, kl_loss = self.alg.update()
             stop = time.time()
             learn_time = stop - start
 
@@ -394,6 +394,9 @@ class DwaqOnPolicyRunner:
         self.writer.add_scalar('Loss/value_function', locs['mean_value_loss'], locs['it'])
         self.writer.add_scalar('Loss/surrogate', locs['mean_surrogate_loss'], locs['it'])
         self.writer.add_scalar('Loss/cenet', locs['mean_autoenc_loss'], locs['it'])
+        self.writer.add_scalar('Loss/cenet_vel_est', locs['vel_loss'], locs['it'])
+        self.writer.add_scalar('Loss/cenet_reconstruction', locs['recon_loss'], locs['it'])
+        self.writer.add_scalar('Loss/cenet_kl', locs['kl_loss'], locs['it'])
         self.writer.add_scalar('Loss/learning_rate', self.alg.learning_rate, locs['it'])
         self.writer.add_scalar('Perf/total_fps', fps, locs['it'])
 
@@ -410,7 +413,11 @@ class DwaqOnPolicyRunner:
                           f"""{'Computation:':>{pad}} {fps:.0f} steps/s (collection: {locs['collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"""
                           f"""{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"""
                           f"""{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"""
+                          f"""{'-' * width}\n"""
                           f"""{'CENet loss:':>{pad}} {locs['mean_autoenc_loss']:.4f}\n"""
+                          f"""{'CENet velocity estimation error:':>{pad}} {locs['vel_loss']:.4f}\n"""
+                          f"""{'CENet reconstruction loss:':>{pad}} {locs['recon_loss']:.4f}\n"""
+                          f"""{'CENet KL divergence loss:':>{pad}} {locs['kl_loss']:.4f}\n"""
                           f"""{'-' * width}\n"""
                           f"""{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"""
                           f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
@@ -454,6 +461,7 @@ class DwaqOnPolicyRunner:
         torch.save({
             'model_state_dict': self.alg.actor_critic.state_dict(),
             'optimizer_state_dict': self.alg.optimizer.state_dict(),
+            'cenet_encoder_state_dict' : self.alg.actor_critic.encoder.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
             'rms': rms_data
