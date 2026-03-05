@@ -11,7 +11,7 @@ Reference: https://github.com/unitreerobotics/unitree_ros
 import os
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg, ActuatorBaseCfg
+from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg, ActuatorBaseCfg, DelayedPDActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 
@@ -122,33 +122,75 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
             solver_position_iteration_count=4,
-            solver_velocity_iteration_count=0,
+            solver_velocity_iteration_count=1,
         ),
     ),
 
     init_state=ArticulationCfg.InitialStateCfg(
         pos=(0.0, 0.0, 0.4),
         joint_pos={
-            ".*L_hip_joint": 0.1,
-            ".*R_hip_joint": -0.1,
-            "F[L,R]_thigh_joint": 0.8,
-            "R[L,R]_thigh_joint": 1.0,
-            ".*_calf_joint": -1.5,
+            'FL_hip_joint': 0.1,   # [rad]
+            'RL_hip_joint': 0.1,   # [rad]
+            'FR_hip_joint': -0.1 ,  # [rad]
+            'RR_hip_joint': -0.1,   # [rad]
+
+            'FL_thigh_joint': 0.8,     # [rad]
+            'RL_thigh_joint': 1.,   # [rad]
+            'FR_thigh_joint': 0.8,     # [rad]
+            'RR_thigh_joint': 1.,   # [rad]
+
+            'FL_calf_joint': -1.5,   # [rad]
+            'RL_calf_joint': -1.5,    # [rad]
+            'FR_calf_joint': -1.5,  # [rad]
+            'RR_calf_joint': -1.5,    # [rad]
         },
         joint_vel={".*": 0.0},
     ),
 
     soft_joint_pos_limit_factor=0.9,
+    
     # actuators={
     #     "base_legs": GO1_ACTUATOR_CFG,
     # },
     # action_scale = 0.25,
+    # actuators={
+    #     "all_joints": ImplicitActuatorCfg(
+    #         joint_names_expr=[".*"],
+    #         stiffness=28.0,
+    #         damping=0.7,
+    #         friction=0.01, # 0.01
+    #     ),
+    # },
     actuators={
-        "all_joints": ImplicitActuatorCfg(
-            joint_names_expr=[".*"],
+        "hip_joints": DelayedPDActuatorCfg(
+            joint_names_expr=[".*_hip_joint"],
             stiffness=28.0,
             damping=0.7,
-            friction=0.01, # 0.01
+            # friction=0.01, # 0.01
+            min_delay=0,
+            max_delay=2,
+            effort_limit_sim=33.5,
+            velocity_limit_sim=50
+        ),
+        "thigh_joints": DelayedPDActuatorCfg(
+            joint_names_expr=[".*_thigh_joint"],
+            stiffness=28.0,
+            damping=0.7,
+            # friction=0.01, # 0.01
+            min_delay=0,
+            max_delay=2,
+            effort_limit_sim=33.5,
+            velocity_limit_sim=28
+        ),
+        "calf_joints": DelayedPDActuatorCfg(
+            joint_names_expr=[".*_calf_joint"],
+            stiffness=28.0,
+            damping=0.7,
+            # friction=0.01, # 0.01
+            min_delay=0,
+            max_delay=2,
+            effort_limit_sim=33.5,
+            velocity_limit_sim=28
         ),
     },
     joint_sdk_names=[

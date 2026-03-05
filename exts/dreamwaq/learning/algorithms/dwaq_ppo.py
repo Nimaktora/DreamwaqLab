@@ -32,7 +32,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from exts.dreamwaq.learning.modules import ActorCriticDwaq
+from exts.dreamwaq.learning.modules import ActorCriticDwaq, CENet
 from exts.dreamwaq.learning.storage import DwaqRolloutStorage
 # from rsl_rl.modules import ActorCritic
 # from rsl_rl.storage import DwaqRolloutStorage
@@ -66,8 +66,15 @@ class DwaqPPO:
         # PPO components
         self.actor_critic = actor_critic
         self.actor_critic.to(self.device)
+        self.cenet = self.actor_critic.cenet
         self.storage = None # initialized later
-        self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
+        
+        self.ac_params = [p for n, p in self.actor_critic.named_parameters() if not n.startswith("cenet.")]
+        self.cenet_params = list(self.cenet.parameters())
+
+        self.optimizer_ac = optim.Adam(self.ac_params, lr=learning_rate)
+        self.optimizer_cenet = optim.Adam(self.cenet_params, lr=learning_rate) 
+
         self.transition = DwaqRolloutStorage.Transition()
 
         # PPO parameters
@@ -162,7 +169,7 @@ class DwaqPPO:
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
 
-            # KL - AdaBoot
+            # KL
             if self.desired_kl != None and self.schedule == 'adaptive':
                 with torch.inference_mode():
                     kl = torch.sum(torch.log(sigma_batch / old_sigma_batch + 1.e-5)
@@ -175,26 +182,12 @@ class DwaqPPO:
                     elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
                         self.learning_rate = min(1e-2, self.learning_rate * 1.5)
 
-                    for param_group in self.optimizer.param_groups:
+                    for param_group in self.optimizer_cenet.param_groups:
                         param_group['lr'] = self.learning_rate
 
-            #Beta VAE loss
-            code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent = self.actor_critic.cenet_forward(obs_hist_batch)
             
-            vel_target = prev_critic_obs_batch[:,45:48]
-            decode_target = actor_obs_batch.detach()
-            vel_target.requires_grad = False
-            decode_target.requires_grad = False
-            vel_loss = nn.MSELoss()(code_vel, vel_target)
-            recon_loss = nn.MSELoss()(decode, decode_target)
 
-            kl_per_sample = -0.5 * torch.sum(
-                1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp()
-                # latent dim
-            )
-            kl_loss = kl_per_sample # batch mean
-
-            autoenc_loss = (vel_loss + recon_loss + beta * kl_loss)
+            # autoenc_loss = (vel_loss + recon_loss + beta * kl_loss)
             
             # autoenc_loss = (nn.MSELoss()(code_vel,vel_target) + nn.MSELoss()(decode,decode_target) \
             #                 + beta*(-0.5 * torch.sum(1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp())))/self.num_mini_batches
@@ -221,14 +214,40 @@ class DwaqPPO:
             else:
                 value_loss = (returns_batch - value_batch).pow(2).mean()
 
-            loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean() + autoenc_loss
+            # --- PPO loss ---
+            ppo_loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
-            # Gradient step
-            self.optimizer.zero_grad()
-            loss.backward()
-            nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
-            self.optimizer.step()
+            self.optimizer_ac.zero_grad()
+            ppo_loss.backward()
+            nn.utils.clip_grad_norm_(self.ac_params, self.max_grad_norm)
+            self.optimizer_ac.step()
 
+            #Beta VAE loss
+            # code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent = CENet.inference(obs_hist_batch)
+            latent_19, decode, mu, logvar= self.cenet.inference(obs_hist_batch)
+            
+            vel_target = prev_critic_obs_batch[:,45:48]
+            decode_target = actor_obs_batch.detach()
+            vel_target.requires_grad = False
+            decode_target.requires_grad = False
+
+            vel_est = latent_19[:,0:3]
+
+            vel_loss = nn.MSELoss()(vel_est, vel_target)
+            recon_loss = nn.MSELoss()(decode, decode_target)
+
+            kl_per_sample = -0.5 * torch.sum(
+                1 + logvar - mu.pow(2) - logvar.exp(),
+                dim=1
+            )
+            kl_loss = kl_per_sample.mean()
+
+            autoenc_loss = vel_loss + recon_loss + beta * kl_loss
+
+            self.optimizer_cenet.zero_grad()
+            autoenc_loss.backward()
+            nn.utils.clip_grad_norm_(self.cenet_params, self.max_grad_norm)
+            self.optimizer_cenet.step()
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
             mean_autoenc_loss += autoenc_loss.item()

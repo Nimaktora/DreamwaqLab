@@ -23,6 +23,7 @@ from exts.dreamwaq.utils.terrains_cfg import RailwayTracksTerrainCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from typing import Dict, Tuple, Sequence
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -139,18 +140,63 @@ class RobotSceneCfg(InteractiveSceneCfg):
 # MDP settings
 ##################
 
+
 class EventCfg:
     """Configuration for events."""
+    
+    # def reset_policy_obs_delay(env, env_ids: Sequence[int], lag_ranges: dict):
+    #     """
+    #     lag_ranges: {"term_key": (min_lag, max_lag), ...}
+    #     """
 
+    #     if isinstance(env_ids, torch.Tensor):
+    #         env_ids_list = env_ids.to("cpu").tolist()
+    #     else:
+    #         env_ids_list = list(env_ids)
+
+    #     bufs = mdp.observations._get_delay_buffers(env)
+    #     for key, (min_lag, max_lag) in lag_ranges.items():
+    #         max_lag = int(max_lag)
+    #         buf = mdp.observations._get_or_create_delay_buf(env, key, max_lag_steps=max_lag)
+
+    #         # 1) 
+    #         buf.reset(env_ids_list)  # :contentReference[oaicite:8]{index=8}
+
+    #         # 2)
+    #         lags = torch.randint(
+    #             low=int(min_lag),
+    #             high=int(max_lag) + 1,
+    #             size=(len(env_ids_list),),
+    #             device=buf.time_lags.device,
+    #             dtype=torch.int,
+    #         )
+
+            # 3) 
+            # buf.set_time_lag(lags, batch_ids=env_ids_list)  # :contentReference[oaicite:9]{index=9}
+
+    # reset_policy_obs_delay = EventTerm(
+    #     func=reset_policy_obs_delay,
+    #     mode="reset",
+    #     min_step_count_between_reset=0,
+    #     params={
+    #         "lag_ranges": {
+    #             "base_ang_vel": (0, 2),
+    #             "projected_gravity": (0, 2),
+    #             "joint_pos_rel": (0, 1),
+    #             "joint_vel_rel": (0, 1),
+    #             "velocity_commands": (0, 1),
+    #         }
+    #     },
+    # )
     # startup
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.2),
-            "dynamic_friction_range": (0.3, 1.2),
-            "restitution_range": (0.0, 0.15),
+            "static_friction_range": (0.5, 0.8),
+            "dynamic_friction_range": (0.4, 0.6),
+            "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
     )
@@ -159,9 +205,33 @@ class EventCfg:
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="base"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
             "mass_distribution_params": (-1.0, 3.0),
             "operation": "add",
+        },
+    )
+
+    # random_joint_params = EventTerm(
+    #     func=mdp.randomize_joint_parameters,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+    #         "friction_distribution_params": (0.0, 0.01),
+    #         "operation": "add",
+    #     },
+    # )
+
+    random_actuator_gains = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        # min_step_count_between_reset=720
+        # mode="reset"
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
+            "stiffness_distribution_params": (-1.0, 1.0),
+            "damping_distribution_params": (-0.1, 0.1),
+            "operation": "add",
+            "distribution": "uniform"
         },
     )
 
@@ -176,38 +246,38 @@ class EventCfg:
     #     },
     # )
 
-    # reset_base = EventTerm(
-    #     func=mdp.reset_root_state_uniform,
-    #     mode="reset",
-    #     params={
-    #         "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-    #         "velocity_range": {
-    #             "x": (0.0, 0.0),
-    #             "y": (0.0, 0.0),
-    #             "z": (0.0, 0.0),
-    #             "roll": (0.0, 0.0),
-    #             "pitch": (0.0, 0.0),
-    #             "yaw": (0.0, 0.0),
-    #         },
-    #     },
-    # )
+    reset_base = EventTerm(
+        func=mdp.reset_root_state_uniform,
+        mode="reset",
+        params={
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "velocity_range": {
+                "x": (-0.5, 0.5),
+                "y": (-0.5, 0.5),
+                "z": (-0.5, 0.5),
+                "roll": (-0.5, 0.5),
+                "pitch": (-0.5, 0.5),
+                "yaw": (-0.5, 0.5),
+            },
+        },
+    )
 
-    # reset_robot_joints = EventTerm(
-    #     func=mdp.reset_joints_by_scale,
-    #     mode="reset",
-    #     params={
-    #         "position_range": (1.0, 1.0),
-    #         "velocity_range": (-1.0, 1.0),
-    #     },
-    # )
+    reset_robot_joints = EventTerm(
+        func=mdp.reset_joints_by_scale,
+        mode="reset",
+        params={
+            "position_range": (0.5, 1.5),
+            "velocity_range": (0.0, 0.0),
+        },
+    )
 
     # interval
-    # push_robot = EventTerm(
-    #     func=mdp.push_by_setting_velocity,
-    #     mode="interval",
-    #     interval_range_s=(5.0, 10.0),
-    #     params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
-    # )
+    push_robot = EventTerm(
+        func=mdp.push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(5.0, 10.0),
+        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+    )
 
 
 @configclass
@@ -216,14 +286,16 @@ class CommandsCfg:
 
     base_velocity = mdp.UniformLevelVelocityCommandCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 10.0),
+        resampling_time_range=(5.0, 10.0),
         rel_standing_envs=0.1,
+        rel_heading_envs=0.05,
+        # rel_rotate_only_envs=0.1,
         debug_vis=True,
         # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
         #     lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
         # ),
         limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.4, 1.4), lin_vel_y=(-0.4, 0.4), ang_vel_z=(-1.0, 1.0)
+            lin_vel_x=(-1.1, 1.1), lin_vel_y=(-0.4, 0.4), ang_vel_z=(-1.0, 1.0)
         ),
     )
 
@@ -235,7 +307,7 @@ class ActionsCfg:
     JointPositionAction = mdp.JointPositionActionWithHistoryCfg(
         asset_name="robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, 
         scale=0.25, use_default_offset=True, clip={".*": (-100.0, 100.0)},
-        preserve_order=True
+        preserve_order=True,
     )
 
 
@@ -255,37 +327,43 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
+        # base_ang_vel = ObsTerm(
+        #     func=mdp.body_ang_vel,
+        #     clip=(-100, 100),
+        #     noise=Unoise(n_min=-0.2, n_max=0.2),
+        # )
+        #  observations.py has errors
+
         base_ang_vel = ObsTerm(
-            func=mdp.body_ang_vel,  # was: mdp.base_ang_vel
-            # scale=0.2,
+            func=mdp.base_ang_vel,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.2, n_max=0.2),
-        )  # :contentReference[oaicite:4]{index=4}
+        )
 
         projected_gravity = ObsTerm(
-            func=mdp.gravity,  # was: mdp.projected_gravity
+            func=mdp.gravity,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.05, n_max=0.05),
-        )  # :contentReference[oaicite:5]{index=5}
+        )
 
         velocity_commands = ObsTerm(
-            func=mdp.command,  # was: mdp.generated_commands
-            params={"command_name": "base_velocity"},  # command(env, command_name) :contentReference[oaicite:6]{index=6}
+            func=mdp.command,
+            params={"command_name": "base_velocity"},
             clip=(-100, 100),
         )
 
         joint_pos_rel = ObsTerm(
-            func=mdp.joint_pos_normalized,  # was: mdp.joint_pos_rel
+            func=mdp.joint_pos_normalized,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.01, n_max=0.01),
-        )  # :contentReference[oaicite:7]{index=7}
+        )
 
         joint_vel_rel = ObsTerm(
-            func=mdp.joint_vel,  # was: mdp.joint_vel_rel
-            # scale=0.05,
+            func=mdp.joint_vel,
+            # params={"max_lag_steps": 1},
             clip=(-100, 100),
             noise=Unoise(n_min=-1.5, n_max=1.5),
-        )  # :contentReference[oaicite:8]{index=8}
+        )
 
         last_action = ObsTerm(
             func=mdp.prev_actions,  # was: mdp.last_action
@@ -310,7 +388,7 @@ class ObservationsCfg:
         """Observations for critic group."""
 
         # policy obs (no noise by default for critic)
-        base_ang_vel = ObsTerm(func=mdp.body_ang_vel, scale=0.2, clip=(-100, 100))  # :contentReference[oaicite:10]{index=10}
+        base_ang_vel = ObsTerm(func=mdp.body_ang_vel, clip=(-100, 100))  # :contentReference[oaicite:10]{index=10}
         projected_gravity = ObsTerm(func=mdp.gravity, clip=(-100, 100))             # :contentReference[oaicite:11]{index=11}
         velocity_commands = ObsTerm(
             func=mdp.command,
@@ -318,12 +396,12 @@ class ObservationsCfg:
             clip=(-100, 100),
         )  # :contentReference[oaicite:12]{index=12}
         joint_pos_rel = ObsTerm(func=mdp.joint_pos_normalized, clip=(-100, 100))    # :contentReference[oaicite:13]{index=13}
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel, scale=0.05, clip=(-100, 100))   # :contentReference[oaicite:14]{index=14}
+        joint_vel_rel = ObsTerm(func=mdp.joint_vel, clip=(-100, 100))   # :contentReference[oaicite:14]{index=14}
         last_action = ObsTerm(func=mdp.prev_actions, clip=(-100, 100))              # :contentReference[oaicite:15]{index=15}
 
         # privileged obs
         base_lin_vel = ObsTerm(
-            func=mdp.body_vel,  # was: mdp.base_lin_vel
+            func=mdp.body_vel,
             clip=(-100, 100),
         )  # :contentReference[oaicite:16]{index=16}
 
@@ -336,7 +414,7 @@ class ObservationsCfg:
             func=mdp.height_scan,
             params={
                 "sensor_cfg": SceneEntityCfg("height_scanner"),
-                "offset": 0.5,
+                "offset": 0.3,
             },
             clip=(-2.0, 5.0),
         )  # :contentReference[oaicite:18]{index=18}
@@ -379,7 +457,7 @@ class RewardsCfg:
                                  "clearance_des": [0.05, 0.05, 0.05, 0.05],})
     action_rate = RewTerm(func=mdp.penalty_action_rate, weight=-0.01)
     action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
-    power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-5)
+    power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
 
 @configclass
 class TerminationsCfg:

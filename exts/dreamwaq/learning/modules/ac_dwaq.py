@@ -35,6 +35,42 @@ import torch.nn as nn
 from torch.distributions import Normal
 from torch.nn.modules import rnn
 
+class CENet(nn.Module):
+    def __init__(self, input_dim=225, latent_dim=19):
+        super().__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.ELU(),
+            nn.Linear(128, 64),
+            nn.ELU(),
+            nn.Linear(64, 3 + 32)
+        )
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim,64),
+            nn.ELU(),
+            nn.Linear(64,128),
+            nn.ELU(),
+            nn.Linear(128,45)
+        )
+    # Reparameterization trick
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps*std
+
+    # input dim -> THIS FUNCTION -> latent vector / CENet output / reparamterized values
+    def inference(self, obs_history):
+        dist = self.encoder(obs_history)
+        est_vel = dist[:, :3]
+        dist_half = (dist.shape[1] - 3) // 2
+        mu = dist[:, 3:3 + dist_half]
+        logvar = dist[:, 3 + dist_half:]
+        z = self.reparameterize(mu, logvar)
+        latent_19 = torch.cat([est_vel, z], dim=-1)
+        decode = self.decoder(latent_19)
+        return latent_19, decode, mu, logvar
+
+
 class ActorCriticDwaq(nn.Module):
     is_recurrent = False
     def __init__(self,  num_actor_obs,
@@ -55,6 +91,8 @@ class ActorCriticDwaq(nn.Module):
 
         mlp_input_dim_a = num_actor_obs + cenet_out_dim
         mlp_input_dim_c = num_critic_obs
+
+        self.cenet = CENet(input_dim=cenet_in_dim, latent_dim=cenet_out_dim)
 
         # Policy
         actor_layers = []
@@ -96,26 +134,28 @@ class ActorCriticDwaq(nn.Module):
 
 
         # == CENet ==
-        self.activation = get_activation(act_name)
+        # self.activation = get_activation(act_name)
         
-        self.encoder = nn.Sequential(
-            nn.Linear(cenet_in_dim,128),
-            self.activation,
-            nn.Linear(128,64),
-            self.activation,
-        )
-        self.encode_mean_latent = nn.Linear(64,cenet_out_dim-3) # -3 -> linear velocity
-        self.encode_logvar_latent = nn.Linear(64,cenet_out_dim-3)
-        self.encode_mean_vel = nn.Linear(64,3)
-        self.encode_logvar_vel = nn.Linear(64,3)
+        # self.encoder = nn.Sequential(
+        #     nn.Linear(cenet_in_dim,128),
+        #     self.activation,
+        #     nn.Linear(128,64),
+        #     self.activation,
+        #     nn.Linear(64, 3 + 32)
+        # )
+        # self.encode_mean_latent = nn.Linear(64,cenet_out_dim-3)
+        # self.encode_logvar_latent = nn.Linear(64,cenet_out_dim-3)
+        # self.encode_mean_vel = nn.Linear(64,3)  # -3 -> linear velocity
+        # self.encode_logvar_vel = nn.Linear(64,3)
 
-        self.decoder = nn.Sequential(
-            nn.Linear(cenet_out_dim,64),
-            self.activation,
-            nn.Linear(64,128),
-            self.activation,
-            nn.Linear(128,45)
-        )
+        # self.decoder = nn.Sequential(
+        #     nn.Linear(cenet_out_dim,64),
+        #     self.activation,
+        #     nn.Linear(64,128),
+        #     self.activation,
+        #     nn.Linear(128,45)
+        # )
+
 
     @staticmethod
     # not used at the moment
@@ -131,31 +171,29 @@ class ActorCriticDwaq(nn.Module):
         raise NotImplementedError
     
 
-    # (important) Reparameterization Trick
-    def reparameterise(self,mean,logvar):
-        logvar = torch.clamp(logvar, -20, 3)
-        var = torch.exp(logvar*0.5)
-        code_temp = torch.randn_like(var)
-        code = mean + var*code_temp
-        return code
+    # # (important) Reparameterization Trick
+    # def reparameterise(self, mu, logvar):
+    #     std = torch.exp(0.5 * logvar)
+    #     eps = torch.randn_like(std)
+    #     return mu
     
-    def cenet_forward(self,obs_history):
-        distribution = self.encoder(obs_history)
-        mean_latent = self.encode_mean_latent(distribution)
-        logvar_latent = self.encode_logvar_latent(distribution)
-        logvar_latent = torch.clamp(logvar_latent, -20, 4)
-        # var = torch.exp(logvar_latent*0.5)
-        # code_temp = torch.randn_like(var)
-        # code = mean_latent + var*code_temp
-        # print("latent : ",code[0])
-        mean_vel = self.encode_mean_vel(distribution)
-        logvar_vel = self.encode_logvar_vel(distribution)
-        logvar_vel = torch.clamp(logvar_vel, -20, 4)
-        code_latent = self.reparameterise(mean_latent,logvar_latent)
-        code_vel = self.reparameterise(mean_vel,logvar_vel)
-        code = torch.cat((code_vel,code_latent),dim=-1)
-        decode = self.decoder(code)
-        return code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent
+    # def cenet_forward(self,obs_history):
+    #     distribution = self.encoder(obs_history)
+    #     mean_latent = self.encode_mean_latent(distribution)
+    #     logvar_latent = self.encode_logvar_latent(distribution)
+    #     logvar_latent = torch.clamp(logvar_latent, -20, 4)
+    #     # var = torch.exp(logvar_latent*0.5)
+    #     # code_temp = torch.randn_like(var)
+    #     # code = mean_latent + var*code_temp
+    #     # print("latent : ",code[0])
+    #     mean_vel = self.encode_mean_vel(distribution)
+    #     logvar_vel = self.encode_logvar_vel(distribution)
+    #     logvar_vel = torch.clamp(logvar_vel, -20, 4)
+    #     code_latent = self.reparameterise(mean_latent,logvar_latent)
+    #     code_vel = self.reparameterise(mean_vel,logvar_vel)
+    #     code = torch.cat((code_vel,code_latent),dim=-1)
+    #     decode = self.decoder(code)
+    #     return code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent
 
     @property
     def action_mean(self):
@@ -173,7 +211,8 @@ class ActorCriticDwaq(nn.Module):
         return torch.isnan(tensor).any() or torch.isinf(tensor).any()
     
     def _build_actor_input(self, obs_cur, obs_history, detach_code=True):
-        code, _, _, _, _, _, _ = self.cenet_forward(obs_history) # (N,19)
+        with torch.no_grad():
+            code, _, _, _ = self.cenet.inference(obs_history)
         if detach_code:
             code = code.detach()
         return torch.cat([code, obs_cur], dim=-1)

@@ -11,7 +11,9 @@ class JointPositionActionWithHistory(JointPositionAction):
         super().__init__(cfg, env)
         self._prev_prev_action = torch.zeros_like(self._raw_actions)
         self._prev_action = torch.zeros_like(self._raw_actions)
-        
+        num_joints = len(self._joint_names)
+        print(self._joint_names)
+
     @property
     def action(self):
         """Current raw action (alias for raw_actions to match reward function)."""
@@ -47,3 +49,6 @@ class JointPositionActionWithHistory(JointPositionAction):
 class JointPositionActionWithHistoryCfg(JointPositionActionCfg):
     """Configuration for the custom action term."""
     class_type = JointPositionActionWithHistory
+
+
+

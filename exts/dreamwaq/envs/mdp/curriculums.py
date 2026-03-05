@@ -23,8 +23,8 @@ def terrain_levels_vel(
     env_ids: Sequence[int],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     command_name: str = "base_velocity",
-    yaw_tracking_tol: float = 0.25,
-    min_yaw_cmd_for_tracking: float = 0.25,
+    yaw_tracking_tol: float = 0.15,
+    min_yaw_cmd_for_tracking: float = 0.15,
 ) -> torch.Tensor:
     """Terrain curriculum based on how well the robot "covers" the commanded motion.
 
@@ -61,7 +61,7 @@ def terrain_levels_vel(
     # Move up condition:
     # 1) Walked more than half a tile length in X (terrain tile size[0] is the tile length)
     # 2) OR (yaw cmd is meaningful AND yaw is tracked well)
-    level_distance = terrain.cfg.terrain_generator.size[0] / 2.5
+    level_distance = terrain.cfg.terrain_generator.size[0] / 2
     rot_only = lin_cmd_mag < 0.05   # 0.05 m/s -> rotate command 
     move_up = (distance > level_distance) | (rot_only & yaw_cmd_active & yaw_tracked)
 

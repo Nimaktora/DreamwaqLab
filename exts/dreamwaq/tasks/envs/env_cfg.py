@@ -10,8 +10,8 @@ class RobotEnvCfg(BaseRobotEnvCfg):
         super().__init__(**kwargs)
         self.num_envs = num_envs  # Environment Count for Training
         self.scene.num_envs = num_envs
-        self.scene.terrain.terrain_generator.num_rows = 10
-        self.scene.terrain.terrain_generator.num_cols = 20
+        self.scene.terrain.terrain_generator.num_rows = 20
+        self.scene.terrain.terrain_generator.num_cols = 10
         self.scene.terrain.terrain_generator.seed = 0
         self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
         self.use_graphics = True  # Ensure graphics are enabled for training
@@ -29,8 +29,8 @@ class PlayRobotEnvCfg(RobotEnvCfg):
         super().__init__(**kwargs)
         self.num_envs = num_envs  # Fewer environments for play testing
         self.scene.num_envs = num_envs
-        self.scene.terrain.terrain_generator.num_rows = 10
-        self.scene.terrain.terrain_generator.num_cols = 20
+        self.scene.terrain.terrain_generator.num_rows = 20
+        self.scene.terrain.terrain_generator.num_cols = 10
         self.use_graphics = True  # Ensure graphics are enabled for training
         self.base_velocity = 1.0  # Some default value
         self.debug_vis = False  # Turn on debug visualization for training purposes

@@ -293,5 +293,5 @@ def penalty_power_distribution_var(
     power = tau * qd  # (N, J)
 
     # joint-wise variance per env
-    var = torch.var(power, dim=1, unbiased=unbiased)
-    return var * var
+    var = torch.var(power, dim=-1)
+    return torch.square(var)

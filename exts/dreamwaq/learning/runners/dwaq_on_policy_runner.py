@@ -460,8 +460,8 @@ class DwaqOnPolicyRunner:
 
         torch.save({
             'model_state_dict': self.alg.actor_critic.state_dict(),
-            'optimizer_state_dict': self.alg.optimizer.state_dict(),
-            'cenet_encoder_state_dict' : self.alg.actor_critic.encoder.state_dict(),
+            'optimizer_state_dict': self.alg.optimizer_ac.state_dict(),
+            'cenet_encoder_state_dict' : self.alg.actor_critic.cenet.encoder.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
             'rms': rms_data
@@ -472,8 +472,8 @@ class DwaqOnPolicyRunner:
         self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
         
         if load_optimizer:
-            self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
-        
+           self.alg.optimizer_ac.load_state_dict(loaded_dict["optimizer_state_dict"])
+ 
         self.current_learning_iteration = loaded_dict['iter']
         
         if 'rms' in loaded_dict:
