@@ -37,13 +37,16 @@ class JointPositionActionWithHistory(JointPositionAction):
     def apply_actions(self):
         super().apply_actions()
 
-    def reset_idx(self, env_ids: torch.Tensor | None = None):
-        super().reset_idx(env_ids)
+    def reset(self, env_ids: torch.Tensor | None = None):
+        # print("JointPositionActionWithHistory.reset called", env_ids)
+        super().reset(env_ids)
+
         if env_ids is None:
-            env_ids = slice(None)
-        
-        self._prev_prev_action[env_ids] = 0.0
-        self._prev_action[env_ids] = 0.0
+            self._prev_action[:] = 0.0
+            self._prev_prev_action[:] = 0.0
+        else:
+            self._prev_action[env_ids] = 0.0
+            self._prev_prev_action[env_ids] = 0.0
 
 @configclass
 class JointPositionActionWithHistoryCfg(JointPositionActionCfg):

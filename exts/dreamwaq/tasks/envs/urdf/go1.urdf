@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<robot name="go1_description" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="robot_description" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <material name="black">
     <color rgba="0.0 0.0 0.0 1.0"/>
   </material>
@@ -29,6 +29,16 @@
   </material>
 
 
+  <joint name="floating_base" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="base"/>
+    <child link="trunk"/>
+  </joint>
+
+
+
+
+
   <link name="base">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -37,11 +47,8 @@
       </geometry>
     </visual>
   </link>
-  <joint name="floating_base" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 0"/>
-    <parent link="base"/>
-    <child link="trunk"/>
-  </joint>
+
+
   <link name="trunk">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -62,6 +69,9 @@
       <inertia ixx="0.016130741919" ixy="0.000593180607" ixz="7.324662e-06" iyy="0.036507810812" iyz="2.0969537e-05" izz="0.044693872053"/>
     </inertial>
   </link>
+
+
+
   <joint name="imu_joint" type="fixed">
     <parent link="trunk"/>
     <child link="imu_link"/>
@@ -93,7 +103,7 @@
     <child link="FR_hip"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-0.802851455917" upper="0.802851455917" velocity="50"/>
+    <limit effort="23.7" lower="-0.863" upper="0.863" velocity="30.1"/>
   </joint>
   <link name="FR_hip">
     <visual>
@@ -135,7 +145,7 @@
     <child link="FR_thigh"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="28"/>
+    <limit effort="23.7" lower="-0.686" upper="4.501" velocity="30.1"/>
   </joint>
   <link name="FR_thigh">
     <visual>
@@ -163,7 +173,7 @@
     <child link="FR_calf"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="28"/>
+    <limit effort="35.55" lower="-2.818" upper="-0.888" velocity="20.06"/>
   </joint>
   <link name="FR_calf">
     <visual>
@@ -216,7 +226,7 @@
     <child link="FL_hip"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-0.802851455917" upper="0.802851455917" velocity="50"/>
+    <limit effort="23.7" lower="-0.863" upper="0.863" velocity="30.1"/>
   </joint>
   <link name="FL_hip">
     <visual>
@@ -258,7 +268,7 @@
     <child link="FL_thigh"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="28"/>
+    <limit effort="23.7" lower="-0.686" upper="4.501" velocity="30.1"/>
   </joint>
   <link name="FL_thigh">
     <visual>
@@ -286,7 +296,7 @@
     <child link="FL_calf"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="28"/>
+    <limit effort="35.55" lower="-2.818" upper="-0.888" velocity="20.06"/>
   </joint>
   <link name="FL_calf">
     <visual>
@@ -339,7 +349,7 @@
     <child link="RR_hip"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-0.802851455917" upper="0.802851455917" velocity="50"/>
+    <limit effort="23.7" lower="-0.863" upper="0.863" velocity="30.1"/>
   </joint>
   <link name="RR_hip">
     <visual>
@@ -381,7 +391,7 @@
     <child link="RR_thigh"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="28"/>
+    <limit effort="23.7" lower="-0.686" upper="4.501" velocity="30.1"/>
   </joint>
   <link name="RR_thigh">
     <visual>
@@ -409,7 +419,7 @@
     <child link="RR_calf"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="28"/>
+    <limit effort="35.55" lower="-2.818" upper="-0.888" velocity="20.06"/>
   </joint>
   <link name="RR_calf">
     <visual>
@@ -462,7 +472,7 @@
     <child link="RL_hip"/>
     <axis xyz="1 0 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-0.802851455917" upper="0.802851455917" velocity="50"/>
+    <limit effort="23.7" lower="-0.863" upper="0.863" velocity="30.1"/>
   </joint>
   <link name="RL_hip">
     <visual>
@@ -504,7 +514,7 @@
     <child link="RL_thigh"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-1.0471975512" upper="4.18879020479" velocity="28"/>
+    <limit effort="23.7" lower="-0.686" upper="4.501" velocity="30.1"/>
   </joint>
   <link name="RL_thigh">
     <visual>
@@ -532,7 +542,7 @@
     <child link="RL_calf"/>
     <axis xyz="0 1 0"/>
     <dynamics damping="0" friction="0"/>
-    <limit effort="33.5" lower="-2.69653369433" upper="-0.916297857297" velocity="28"/>
+    <limit effort="35.55" lower="-2.818" upper="-0.888" velocity="20.06"/>
   </joint>
   <link name="RL_calf">
     <visual>
@@ -578,5 +588,262 @@
       <inertia ixx="9.6e-06" ixy="0.0" ixz="0.0" iyy="9.6e-06" iyz="0.0" izz="9.6e-06"/>
     </inertial>
   </link>
- </robot>
 
+  <gazebo reference="ejt">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+
+  <gazebo reference="imu_link">
+    <gravity>true</gravity>
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>1000</update_rate>
+      <visualize>true</visualize>
+      <topic>__default_topic__</topic>
+      <plugin filename="libgazebo_ros_imu_sensor.so" name="imu_plugin">
+        <topicName>trunk_imu</topicName>
+        <bodyName>imu_link</bodyName>
+        <updateRateHZ>1000.0</updateRateHZ>
+        <gaussianNoise>0.0</gaussianNoise>
+        <xyzOffset>0 0 0</xyzOffset>
+        <rpyOffset>0 0 0</rpyOffset>
+        <frameName>imu_link</frameName>
+      </plugin>
+      <pose>0 0 0 0 0 0</pose>
+    </sensor>
+  </gazebo>
+
+
+
+
+  <ros2_control name="FL_hip" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FL_hip_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="FR_hip" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FR_hip_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RL_hip" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RL_hip_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RR_hip" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RR_hip_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <!-- .............THIGH JOINTS............. -->
+
+  <ros2_control name="FL_thigh" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FL_thigh_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="FR_thigh" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FR_thigh_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RL_thigh" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RL_thigh_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RR_thigh" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RR_thigh_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+
+
+
+  <!-- .............CALF JOINTS............. -->
+
+  <ros2_control name="FL_calf" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FL_calf_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="FR_calf" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="FR_calf_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RL_calf" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RL_calf_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+
+    </joint>
+  </ros2_control>
+
+  <ros2_control name="RR_calf" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+
+    <joint name="RR_calf_joint">
+      <command_interface name="effort"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+      
+    </joint>
+  </ros2_control>
+
+
+  
+  <gazebo>
+    <plugin filename="libgazebo_ros_p3d.so" name="p3d_base_controller">
+      <ros>
+        <!-- <namespace>/demo</namespace> -->
+        <argument>odom:=odom/ground_truth</argument>
+      </ros>
+      <body_name>base</body_name>
+      <frame_name>world</frame_name>
+      <update_rate>250.0</update_rate>
+      <xyz_offset>0 0 0</xyz_offset>
+      <rpy_offset>0 0 0</rpy_offset>
+      <gaussian_noise>0.00001</gaussian_noise>
+    </plugin>
+  </gazebo>
+
+
+
+  <gazebo>
+    
+    <plugin name="gazebo_ros_init" filename="libgazebo_ros_init.so">
+      <ros>
+
+        <namespace>/</namespace>
+      </ros>
+    </plugin>
+
+
+    <plugin name="gazebo_ros_factory" filename="libgazebo_ros_factory.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+    </plugin>
+
+
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so">
+      <ros>
+        <namespace>/</namespace>
+      </ros>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find robot_gazebo)/config/go1_ros_control.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+
+
+  <!-- <gazebo reference="RR_foot">
+    <mu1>10000.0</mu1>
+    <mu2>10000.0</mu2>
+    <self_collide>1</self_collide>
+    <material>Gazebo/DarkGrey</material>
+    <kp value="1000000.0"/>
+    <kd value="1.0"/>
+  </gazebo> -->
+
+
+
+ </robot>

@@ -4,4 +4,4 @@
 """Implementation of different RL agents."""
 
 
-from .dwaq_ppo import DwaqPPO
+from .dwaq_ppo import *

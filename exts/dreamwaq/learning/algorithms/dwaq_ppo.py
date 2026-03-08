@@ -1,80 +1,69 @@
-# SPDX-FileCopyrightText: Copyright (c) 2021 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: BSD-3-Clause
-# 
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
+# Copyright (c) 2025, Amr Mousa, University of Manchester
+# Copyright (c) 2025, ETH Zurich
+# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES
 #
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
+# This file is based on code from the rsl_rl repository:
+# https://github.com/leggedrobotics/rsl_rl
 #
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
+# The original code is licensed under the BSD 3-Clause License.
+# See the `licenses/` directory for details.
 #
-# 3. Neither the name of the copyright holder nor the names of its
-# contributors may be used to endorse or promote products derived from
-# this software without specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-# Copyright (c) 2021 ETH Zurich, Nikita Rudin
+# This version includes significant modifications by Amr Mousa (2025).
+
+from __future__ import annotations
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from exts.dreamwaq.learning.modules import ActorCriticDwaq, CENet
+from exts.dreamwaq.learning.modules import ActorCriticDwaq
 from exts.dreamwaq.learning.storage import DwaqRolloutStorage
-# from rsl_rl.modules import ActorCritic
-# from rsl_rl.storage import DwaqRolloutStorage
+from exts.dreamwaq.utils import AdaBelief, AdamNorm
 
-class DwaqPPO:
+
+class PPOWAQ:
     actor_critic: ActorCriticDwaq
-    def __init__(self,
-                 actor_critic,
-                 num_learning_epochs=1,
-                 num_mini_batches=1,
-                 clip_param=0.2,
-                 gamma=0.99,
-                 lam=0.95,
-                 value_loss_coef=1.0,
-                 entropy_coef=0.0,
-                 learning_rate=1e-3,
-                 max_grad_norm=1.0,
-                 use_clipped_value_loss=True,
-                 schedule="fixed",
-                 desired_kl=0.01,
-                 device='cpu',
-                 optimizer='Adam',
-                 ):
 
+    def __init__(
+        self,
+        actor_critic=ActorCriticDwaq,
+        num_learning_epochs=1,
+        num_mini_batches=1,
+        clip_param=0.2,
+        gamma=0.99,
+        lam=0.95,
+        value_loss_coef=1.0,
+        entropy_coef=0.0,
+        lr_max=1.0e-3,
+        lr_min=1.0e-5,
+        adam_betas=(0.9, 0.999),
+        max_grad_norm=1.0,
+        use_clipped_value_loss=True,
+        schedule="fixed",
+        desired_kl=0.01,
+        device="cpu",
+        optimizer="adam",
+    ):
         self.device = device
-
         self.desired_kl = desired_kl
         self.schedule = schedule
-        self.learning_rate = learning_rate
+        self.lr = (lr_max + lr_min) / 2.0  # Start at the average of lr_max and lr_min
+        self.max_lr = lr_max
+        self.min_lr = lr_min
 
         # PPO components
         self.actor_critic = actor_critic
         self.actor_critic.to(self.device)
-        self.cenet = self.actor_critic.cenet
-        self.storage = None # initialized later
-        
-        self.ac_params = [p for n, p in self.actor_critic.named_parameters() if not n.startswith("cenet.")]
-        self.cenet_params = list(self.cenet.parameters())
-
-        self.optimizer_ac = optim.Adam(self.ac_params, lr=learning_rate)
-        self.optimizer_cenet = optim.Adam(self.cenet_params, lr=learning_rate) 
-
+        optimizer = "adam" if not optimizer else optimizer.lower()
+        if optimizer == "Adam".lower():
+            self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=self.lr, betas=adam_betas)  # type: ignore
+        elif optimizer == "AdamNorm".lower():
+            self.optimizer = AdamNorm(self.actor_critic.parameters(), lr=self.lr, betas=adam_betas)
+        elif optimizer == "AdaBelief".lower():
+            self.optimizer = AdaBelief(self.actor_critic.parameters(), lr=self.lr, betas=adam_betas)
+        else:
+            raise ValueError(f"[ERROR]: Unsupported optimizer: {optimizer}")
+        print(f"[INFO]: Using optimizer: {self.optimizer}")
         self.transition = DwaqRolloutStorage.Transition()
 
         # PPO parameters
@@ -87,175 +76,228 @@ class DwaqPPO:
         self.lam = lam
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
+        self.kl_estimate = 0.0
 
-    def init_storage(self,
-                     num_envs,
-                     num_transitions_per_env,
-                     actor_obs_shape,
-                     critic_obs_shape,
-                     obs_hist_shape, 
-                     action_shape):
-        action_shape = tuple(int(x) for x in action_shape)
-        self.storage = DwaqRolloutStorage(num_envs,
-                                      num_transitions_per_env,
-                                      actor_obs_shape,
-                                      critic_obs_shape,
-                                      obs_hist_shape, 
-                                      action_shape,
-                                      self.device)
+    def init_storage(
+        self,
+        num_envs,
+        num_transitions_per_env,
+        actor_obs_shape,
+        critic_obs_shape,
+        action_shape,
+    ):
+        self.storage = DwaqRolloutStorage(
+            num_envs,
+            num_transitions_per_env,
+            actor_obs_shape,
+            critic_obs_shape,
+            action_shape,
+            self.device,
+        )
 
+    def init_schedules(self, tot_iter):
+        if self.schedule == "cosine":
+            self.lr_schedule.init(tot_iter)
 
-    # why deactivated ? 
+    def update_schedules(self, it):
+        """Update learning rate and other schedules based on the iteration count."""
+        if self.schedule == "cosine":
+            self.lr = self.lr_schedule(it)
+            for param_group in self.optimizer.param_groups:
+                param_group["lr"] = self.lr
+
+        # KL-based adaptive learning rate
+        elif self.schedule == "adaptive":
+            assert self.desired_kl is not None, "[ERROR]: desired_kl must be set for adaptive scheduling"
+            with torch.inference_mode():
+                for param_group in self.optimizer.param_groups:
+                    kl_mean = self.kl_estimate  # Store KL estimate during training
+                    if kl_mean > self.desired_kl * 2.0:
+                        self.lr = max(self.min_lr, self.lr / 1.5)
+                    elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
+                        self.lr = min(self.max_lr, self.lr * 1.5)
+                    param_group["lr"] = self.lr
+
     def test_mode(self):
         self.actor_critic.test()
-    
+
     def train_mode(self):
         self.actor_critic.train()
 
-    def act(self, obs, critic_obs, prev_critic_obs, obs_history):
-        # if self.actor_critic.is_recurrent:
-        #     self.transition.hidden_states = self.actor_critic.get_hidden_states()
-        # Compute the actions and values
-        # self.transition.actions = self.actor_critic.act(obs).detach()
-        self.transition.actions = self.actor_critic.act(obs, obs_history=obs_history).detach()
-        self.transition.values = self.actor_critic.evaluate(critic_obs).detach()
+    def act(self, obs, critic_obs, obs_history):
+        if self.actor_critic.is_recurrent:
+            self.transition.hidden_states = self.actor_critic.get_hidden_states()
+            # TODO: check it!
+            actions, next_hidden_state_a = self.actor_critic.act(obs, hidden_states=self.transition.hidden_states[0])
+            self.transition.actions = actions.detach()  # type: ignore
+            values, next_hidden_state_c = self.actor_critic.evaluate(
+                critic_obs, hidden_states=self.transition.hidden_states[1]
+            )
+            self.transition.values = values.detach()
+            self.actor_critic.set_hidden_states(next_hidden_state_a, next_hidden_state_c)
+            self.transition.next_hidden_states = (next_hidden_state_a, next_hidden_state_c)  # type: ignore
+        else:
+            self.transition.actions = self.actor_critic.act(obs, obs_history=obs_history).detach() # type: ignore
+            self.transition.values = self.actor_critic.critic_evaluate(critic_obs).detach()
         self.transition.actions_log_prob = self.actor_critic.get_actions_log_prob(self.transition.actions).detach()
         self.transition.action_mean = self.actor_critic.action_mean.detach()
         self.transition.action_sigma = self.actor_critic.action_std.detach()
         # need to record obs and critic_obs before env.step()
-        self.transition.actor_observations = obs
-        self.transition.observation_history = obs_history
+        self.transition.observations = obs
         self.transition.critic_observations = critic_obs
-        self.transition.prev_critic_obs = prev_critic_obs
+        self.transition.obs_history = obs_history
+
         return self.transition.actions
-    
-    def process_env_step(self, rewards, dones, infos):
+
+    def process_env_step(self, next_obs, rewards, dones, infos):
+        self.transition.next_observations = next_obs.clone()
+        if "critic" in infos["observations"]:
+            self.transition.next_critic_observations = infos["observations"]["critic"].clone()
+        else:
+            self.transition.next_critic_observations = next_obs.clone()
         self.transition.rewards = rewards.clone()
         self.transition.dones = dones
 
         # Bootstrapping on time outs
-        if 'time_outs' in infos:
-            self.transition.rewards += self.gamma * torch.squeeze(self.transition.values * infos['time_outs'].unsqueeze(1).to(self.device), 1)
+        if "time_outs" in infos:
+            time_outs = infos["time_outs"].unsqueeze(1).to(self.device)
+
+            self.transition.rewards += self.gamma * torch.squeeze(
+                self.transition.values * time_outs,
+                1,
+            )
 
         # Record the transition
         self.storage.add_transitions(self.transition)
         self.transition.clear()
         self.actor_critic.reset(dones)
-    
+
     def compute_returns(self, last_critic_obs):
-        last_values = self.actor_critic.evaluate(last_critic_obs).detach()
+        if self.actor_critic.is_recurrent:
+            hidden_states_c = self.actor_critic.get_hidden_states()[1]
+            last_values, _ = self.actor_critic.evaluate(last_critic_obs, hidden_states=hidden_states_c)
+        else:
+            last_values = self.actor_critic.evaluate(last_critic_obs)
+        last_values = last_values.detach()
         self.storage.compute_returns(last_values, self.gamma, self.lam)
 
-    # applying autoencoder structure
-    def update(self, beta=1.0):
+    def _compute_auxiliary_loss(self, batch: dict) -> dict:
+        """Compute any auxiliary loss. Override this in subclasses if needed."""
+        return {}
+
+    def _compute_surrogate_loss(self, actions_log_prob, old_actions_log_prob, advantages):
+        ratio = torch.exp(actions_log_prob - torch.squeeze(old_actions_log_prob))
+        advantages = torch.squeeze(advantages).clone()
+        surrogate = advantages * ratio
+        surrogate_clipped = advantages * torch.clamp(ratio, 1.0 - self.clip_param, 1.0 + self.clip_param)
+        return torch.clamp(-torch.min(surrogate, surrogate_clipped).mean(), -1e2, 1e2)
+
+    def _compute_value_loss(self, value, target_values, returns):
+        if self.use_clipped_value_loss:
+            value_clipped = target_values + (value - target_values).clamp(-self.clip_param, self.clip_param)
+            value_losses = (value - returns).pow(2)
+            value_losses_clipped = (value_clipped - returns).pow(2)
+            value_loss = torch.max(value_losses, value_losses_clipped).mean()
+        else:
+            value_loss = (returns - value).pow(2).mean()
+        return self.value_loss_coef * value_loss
+    
+    def _update_post_backprop(self):
+        pass
+
+    def update(self, it):
         mean_value_loss = 0
         mean_surrogate_loss = 0
-        mean_autoenc_loss = 0
-        # if self.actor_critic.is_recurrent:
-        #     generator = self.storage.reccurent_mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        # else:
-        #     generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
-        for actor_obs_batch, critic_obs_batch, prev_critic_obs_batch, \
-            obs_hist_batch, actions_batch, target_values_batch, \
-            advantages_batch, returns_batch, old_actions_log_prob_batch, \
-            old_mu_batch, old_sigma_batch, hid_states_batch, masks_batch in generator:
+        mean_aux_loss = {}
+        mean_entropy_loss = 0
 
-            # self.actor_critic.act(actor_obs_batch, obs_hist_batch, masks=masks_batch, hidden_states=hid_states_batch[0]) # ActorCriticDwaq.act 호출, update, 위에 있는 함수는 rollout용
-            self.actor_critic.act(actor_obs_batch, obs_hist_batch)
-            actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch) # log probability
-            value_batch = self.actor_critic.evaluate(critic_obs_batch, masks=masks_batch, hidden_states=hid_states_batch[1])
+        generator = self.storage.mini_batch_generator(self.num_mini_batches, self.num_learning_epochs)
+        num_updates = self.num_learning_epochs * self.num_mini_batches
+
+        for batch in generator:
+            (
+                obs_batch,
+                critic_obs_batch,
+                actions_batch,
+                next_critic_obs_batch,
+                target_values_batch,
+                advantages_batch,
+                returns_batch,
+                old_actions_log_prob_batch,
+                old_mu_batch,
+                old_sigma_batch,
+                obs_history_batch,
+                hid_states_batch,
+                masks_batch,
+            ) = batch
+
+            self.original_batch_size = returns_batch.shape[0]
+            self.actor_critic.act(obs_batch,obs_history=obs_history_batch)
+            value_batch = self.actor_critic.evaluate(critic_obs_batch)
+
+            actions_log_prob_batch = self.actor_critic.get_actions_log_prob(actions_batch)
+
             mu_batch = self.actor_critic.action_mean
             sigma_batch = self.actor_critic.action_std
             entropy_batch = self.actor_critic.entropy
 
-            # KL
-            if self.desired_kl != None and self.schedule == 'adaptive':
+            # KL estimate for adaptive scheduling
+            if self.schedule == "adaptive":
                 with torch.inference_mode():
-                    kl = torch.sum(torch.log(sigma_batch / old_sigma_batch + 1.e-5)
-                                   + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
-                                   / (2.0 * torch.square(sigma_batch)) - 0.5, axis=-1)
-                    kl_mean = torch.mean(kl)
+                    # Ensure numerical stability using torch.clamp
+                    safe_sigma_ratio = torch.clamp(sigma_batch / old_sigma_batch, min=1e-5, max=1e5)
+                    kl = torch.sum(
+                        torch.log(safe_sigma_ratio)
+                        + (torch.square(old_sigma_batch) + torch.square(old_mu_batch - mu_batch))
+                        / (2.0 * torch.square(sigma_batch))
+                        - 0.5,
+                        dim=-1,
+                    )
+                    self.kl_estimate = kl.mean().item()
 
-                    if kl_mean > self.desired_kl * 2.0:
-                        self.learning_rate = max(1e-5, self.learning_rate / 1.5)
-                    elif kl_mean < self.desired_kl / 2.0 and kl_mean > 0.0:
-                        self.learning_rate = min(1e-2, self.learning_rate * 1.5)
+            # Update schedules before computing loss
+            self.update_schedules(it)
 
-                    for param_group in self.optimizer_cenet.param_groups:
-                        param_group['lr'] = self.learning_rate
-
-            
-
-            # autoenc_loss = (vel_loss + recon_loss + beta * kl_loss)
-            
-            # autoenc_loss = (nn.MSELoss()(code_vel,vel_target) + nn.MSELoss()(decode,decode_target) \
-            #                 + beta*(-0.5 * torch.sum(1 + logvar_latent - mean_latent.pow(2) - logvar_latent.exp())))/self.num_mini_batches
-            # estimation_loss = (code[:,0:3] - prev_critic_obs_batch[:,45:48]).pow(2).mean()
-            # reconst_loss = (decode - obs_batch).pow(2).mean()
-            # latent_loss = beta*(-0.5 * torch.sum(1 + logvar - mean.pow(2) - logvar.exp()))/mean.shape[0]
-            # autoenc_loss = estimation_loss + reconst_loss + latent_loss
-            
-
-            # Surrogate loss
-            ratio = torch.exp(actions_log_prob_batch - torch.squeeze(old_actions_log_prob_batch))
-            surrogate = -torch.squeeze(advantages_batch) * ratio
-            surrogate_clipped = -torch.squeeze(advantages_batch) * torch.clamp(ratio, 1.0 - self.clip_param,
-                                                                            1.0 + self.clip_param)
-            surrogate_loss = torch.max(surrogate, surrogate_clipped).mean()
-
-            # Value function loss
-            if self.use_clipped_value_loss:
-                value_clipped = target_values_batch + (value_batch - target_values_batch).clamp(-self.clip_param,
-                                                                                                self.clip_param)
-                value_losses = (value_batch - returns_batch).pow(2)
-                value_losses_clipped = (value_clipped - returns_batch).pow(2)
-                value_loss = torch.max(value_losses, value_losses_clipped).mean()
-            else:
-                value_loss = (returns_batch - value_batch).pow(2).mean()
-
-            # --- PPO loss ---
-            ppo_loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
-
-            self.optimizer_ac.zero_grad()
-            ppo_loss.backward()
-            nn.utils.clip_grad_norm_(self.ac_params, self.max_grad_norm)
-            self.optimizer_ac.step()
-
-            #Beta VAE loss
-            # code,code_vel,decode,mean_vel,logvar_vel,mean_latent,logvar_latent = CENet.inference(obs_hist_batch)
-            latent_19, decode, mu, logvar= self.cenet.inference(obs_hist_batch)
-            
-            vel_target = prev_critic_obs_batch[:,45:48]
-            decode_target = actor_obs_batch.detach()
-            vel_target.requires_grad = False
-            decode_target.requires_grad = False
-
-            vel_est = latent_19[:,0:3]
-
-            vel_loss = nn.MSELoss()(vel_est, vel_target)
-            recon_loss = nn.MSELoss()(decode, decode_target)
-
-            kl_per_sample = -0.5 * torch.sum(
-                1 + logvar - mu.pow(2) - logvar.exp(),
-                dim=1
+            # Compute losses
+            surrogate_loss = self._compute_surrogate_loss(
+            actions_log_prob_batch,
+            old_actions_log_prob_batch,
+            advantages_batch,
             )
-            kl_loss = kl_per_sample.mean()
+            value_loss = self._compute_value_loss(
+                value_batch,
+                target_values_batch,
+                returns_batch,
+            )
+            entropy_loss = -self.entropy_coef * entropy_batch.mean()
 
-            autoenc_loss = vel_loss + recon_loss + beta * kl_loss
+            aux_loss_dict = {}
+            aux_loss = sum(aux_loss_dict.values()) if len(aux_loss_dict) > 0 else 0.0
 
-            self.optimizer_cenet.zero_grad()
-            autoenc_loss.backward()
-            nn.utils.clip_grad_norm_(self.cenet_params, self.max_grad_norm)
-            self.optimizer_cenet.step()
+            loss = surrogate_loss + value_loss + entropy_loss + aux_loss
+
+            # Gradient step
+            if torch.isnan(loss).any() or self.actor_critic.nan_detected:
+                print("[WARNING]: NaN detected in loss. Skipping update.")
+                self.optimizer.zero_grad()
+                self.storage.clear()
+                return None
+            else:
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.max_grad_norm)
+                self.optimizer.step()
+                self._update_post_backprop()
+
             mean_value_loss += value_loss.item()
             mean_surrogate_loss += surrogate_loss.item()
-            mean_autoenc_loss += autoenc_loss.item()
+            mean_entropy_loss += entropy_loss.item()
 
-        num_updates = self.num_learning_epochs * self.num_mini_batches
-        mean_value_loss /= num_updates
-        mean_surrogate_loss /= num_updates
-        mean_autoenc_loss /= num_updates
+            mean_loss = {
+                "value_function": mean_value_loss / num_updates,
+                "surrogate": mean_surrogate_loss / num_updates,
+                "entropy_loss": mean_entropy_loss / num_updates,
+            }
         self.storage.clear()
 
-        return mean_value_loss, mean_surrogate_loss, mean_autoenc_loss, vel_loss, recon_loss, kl_loss
+        return mean_loss

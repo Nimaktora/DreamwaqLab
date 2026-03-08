@@ -144,6 +144,8 @@ def prev_actions(
         env: ManagerBasedRLEnv
         ) -> torch.Tensor:
     return env.action_manager.action.view(env.num_envs, -1)
+    # debug = torch.zeros(env.num_envs, 12, device='cuda:0')
+    # return debug
 
 
 # =============================================================================
@@ -177,6 +179,14 @@ def disturbance_force(
         return force.view(env.num_envs, -1)
     base_idx = _get_body_index(asset, base_body_names)
     return force[:, base_idx, :].view(env.num_envs, -1)
+
+def base_external_force(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    asset: Articulation = env.scene[asset_cfg.name]
+    return asset._external_force_b[:, 0, :]
+
 
 def height_scan(
     env: ManagerBasedRLEnv,

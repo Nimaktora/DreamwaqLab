@@ -4,6 +4,6 @@
 """Definitions for neural-network components for RL-agents."""
 
 
-from .ac_dwaq import ActorCriticDwaq, CENet
+from .ac_dwaq import ActorCriticDwaq, CENet, CenetRolloutStorage
 from .base.ac_base import ActorCriticMlp, ActorCriticRnn, ActorCriticRnnDblEnc
 from .utils import mlp_factory

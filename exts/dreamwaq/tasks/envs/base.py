@@ -100,8 +100,8 @@ class RobotSceneCfg(InteractiveSceneCfg):
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
+            # static_friction=1.0,
+            # dynamic_friction=1.0,
         ),
         visual_material=sim_utils.MdlFileCfg(
             mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
@@ -115,14 +115,14 @@ class RobotSceneCfg(InteractiveSceneCfg):
 
     # sensors
     height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base",
+        prim_path="{ENV_REGEX_NS}/Robot/trunk",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.3)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/base.*", history_length=3, track_air_time=True)
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/trunk.*", history_length=3, track_air_time=True)
     # lights
     # light = AssetBaseCfg(
     #     prim_path="/World/light",
@@ -140,9 +140,10 @@ class RobotSceneCfg(InteractiveSceneCfg):
 # MDP settings
 ##################
 
-
+@configclass
 class EventCfg:
     """Configuration for events."""
+    pass
     
     # def reset_policy_obs_delay(env, env_ids: Sequence[int], lag_ranges: dict):
     #     """
@@ -189,6 +190,7 @@ class EventCfg:
     #     },
     # )
     # startup
+# -------------------
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
         mode="startup",
@@ -210,7 +212,7 @@ class EventCfg:
             "operation": "add",
         },
     )
-
+# -------------------
     # random_joint_params = EventTerm(
     #     func=mdp.randomize_joint_parameters,
     #     mode="startup",
@@ -236,16 +238,16 @@ class EventCfg:
     )
 
     # # reset
-    # base_external_force_torque = EventTerm(
-    #     func=mdp.apply_external_force_torque,
-    #     mode="reset",
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="base"),
-    #         "force_range": (0.0, 0.0),
-    #         "torque_range": (-0.0, 0.0),
-    #     },
-    # )
-
+    base_external_force_torque = EventTerm(
+        func=mdp.apply_external_force_torque,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
+            "force_range": (-2.0, 2.0),
+            "torque_range": (-3.0, 3.0),
+        },
+    )
+# -------------------
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
@@ -267,18 +269,21 @@ class EventCfg:
         mode="reset",
         params={
             "position_range": (0.5, 1.5),
-            "velocity_range": (0.0, 0.0),
+            "velocity_range": (0.5, 1.5),
         },
     )
 
-    # interval
+    # # interval
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(5.0, 10.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        interval_range_s=(8.0, 12.0),
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
+            "velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},
+        },
     )
-
+# -------------------
 
 @configclass
 class CommandsCfg:
@@ -303,7 +308,7 @@ class CommandsCfg:
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
-
+# TODO : action noise 넣기  
     JointPositionAction = mdp.JointPositionActionWithHistoryCfg(
         asset_name="robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, 
         scale=0.25, use_default_offset=True, clip={".*": (-100.0, 100.0)},
@@ -335,38 +340,38 @@ class ObservationsCfg:
         #  observations.py has errors
 
         base_ang_vel = ObsTerm(
-            func=mdp.base_ang_vel,
+            func=mdp_std.base_ang_vel,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.2, n_max=0.2),
         )
 
         projected_gravity = ObsTerm(
-            func=mdp.gravity,
+            func=mdp_std.projected_gravity,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
 
         velocity_commands = ObsTerm(
-            func=mdp.command,
+            func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
             clip=(-100, 100),
         )
 
         joint_pos_rel = ObsTerm(
-            func=mdp.joint_pos_normalized,
+            func=mdp_std.joint_pos_rel,
             clip=(-100, 100),
             noise=Unoise(n_min=-0.01, n_max=0.01),
         )
 
         joint_vel_rel = ObsTerm(
-            func=mdp.joint_vel,
+            func=mdp_std.joint_vel_rel,
             # params={"max_lag_steps": 1},
             clip=(-100, 100),
             noise=Unoise(n_min=-1.5, n_max=1.5),
         )
 
         last_action = ObsTerm(
-            func=mdp.prev_actions,  # was: mdp.last_action
+            func=mdp_std.last_action,  # was: mdp.last_action
             clip=(-100, 100),
         )  # :contentReference[oaicite:9]{index=9}
 
@@ -388,34 +393,56 @@ class ObservationsCfg:
         """Observations for critic group."""
 
         # policy obs (no noise by default for critic)
-        base_ang_vel = ObsTerm(func=mdp.body_ang_vel, clip=(-100, 100))  # :contentReference[oaicite:10]{index=10}
-        projected_gravity = ObsTerm(func=mdp.gravity, clip=(-100, 100))             # :contentReference[oaicite:11]{index=11}
+        base_ang_vel = ObsTerm(
+            func=mdp_std.base_ang_vel,
+            clip=(-100, 100),
+        )
+
+        projected_gravity = ObsTerm(
+            func=mdp_std.projected_gravity,
+            clip=(-100, 100),
+        )
+
         velocity_commands = ObsTerm(
-            func=mdp.command,
+            func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
             clip=(-100, 100),
-        )  # :contentReference[oaicite:12]{index=12}
-        joint_pos_rel = ObsTerm(func=mdp.joint_pos_normalized, clip=(-100, 100))    # :contentReference[oaicite:13]{index=13}
-        joint_vel_rel = ObsTerm(func=mdp.joint_vel, clip=(-100, 100))   # :contentReference[oaicite:14]{index=14}
-        last_action = ObsTerm(func=mdp.prev_actions, clip=(-100, 100))              # :contentReference[oaicite:15]{index=15}
+        )
+
+        joint_pos_rel = ObsTerm(
+            func=mdp_std.joint_pos_rel,
+            clip=(-100, 100),
+        )
+
+        joint_vel_rel = ObsTerm(
+            func=mdp_std.joint_vel_rel,
+            # params={"max_lag_steps": 1},
+            clip=(-100, 100),
+        )
+
+        last_action = ObsTerm(
+            func=mdp_std.last_action,  # was: mdp.last_action
+            clip=(-100, 100),
+        )  # :contentReference[oaicite:9]{index=9}
 
         # privileged obs
         base_lin_vel = ObsTerm(
-            func=mdp.body_vel,
+            func=mdp_std.base_lin_vel,
             clip=(-100, 100),
         )  # :contentReference[oaicite:16]{index=16}
 
         disturbance_force = ObsTerm(
-            func=mdp.disturbance_force,
+            func=mdp.base_external_force,
             clip=(-100, 100),
         )  # :contentReference[oaicite:17]{index=17}
 
         height_scanner = ObsTerm(
-            func=mdp.height_scan,
+            func=mdp_std.height_scan,
             params={
                 "sensor_cfg": SceneEntityCfg("height_scanner"),
                 "offset": 0.3,
             },
+            # clip=(-2.0, 5.0),
             clip=(-2.0, 5.0),
         )  # :contentReference[oaicite:18]{index=18}
 
@@ -466,7 +493,7 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     base_contact = DoneTerm(
         func=mdp.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="base"), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="trunk"), "threshold": 1.0},
     )
     bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
 
@@ -491,7 +518,7 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
     # MDP settings
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
-    # events: EventCfg = EventCfg()
+    events: EventCfg = EventCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
@@ -507,8 +534,8 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
-        self.scene.contact_forces.update_period = self.sim.dt
-        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        # self.scene.contact_forces.update_period = self.sim.dt
+        # self.scene.height_scanner.update_period = self.decimation * self.sim.dt
 
         # check if terrain levels curriculum is enabled - if so, enable curriculum for terrain generator
         # this generates terrains with increasing difficulty and is useful for training
@@ -518,3 +545,21 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
+
+        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
+        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
+
+        self.sim.physics_material = self.scene.terrain.physics_material
+
+        # Set extended domain randomization parameters
+        # self.events.physics_material.params["static_friction_range"] = (0.7, 1.0)
+        # self.events.physics_material.params["dynamic_friction_range"] = (0.5, 0.8)
+        # self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
+        # self.events.add_base_mass.params["mass_distribution_params"] = (-0.5, 0.5)
+        # self.events.add_base_mass.params["recompute_inertia"] = True
+        self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
+        self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
+        self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
+        self.events.add_base_mass.params["recompute_inertia"] = True

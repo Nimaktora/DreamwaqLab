@@ -11,4 +11,4 @@ from .actions import *
 
 
 # from ~ import * : 모듈이름을 사용하지 않고 바로 함수이름으로 사용할 수 있다. 
-# noqa : 코드 분석기가 경고 나 오류 무시
+# noqa : 코드 분석기가 경고나 오류 무시

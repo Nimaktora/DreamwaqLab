@@ -23,8 +23,8 @@ def terrain_levels_vel(
     env_ids: Sequence[int],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
     command_name: str = "base_velocity",
-    yaw_tracking_tol: float = 0.15,
-    min_yaw_cmd_for_tracking: float = 0.15,
+    yaw_tracking_tol: float = 0.2,
+    min_yaw_cmd_for_tracking: float = 0.2,
 ) -> torch.Tensor:
     """Terrain curriculum based on how well the robot "covers" the commanded motion.
 
