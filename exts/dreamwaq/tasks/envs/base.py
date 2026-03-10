@@ -1,5 +1,6 @@
 import os
 import torch
+import math
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ManagerBasedRLEnv
@@ -40,6 +41,7 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     horizontal_scale=0.1,
     vertical_scale=0.005,
     slope_threshold=0.75,
+    # max_init_terrain_level=4,
     # curriculum=True,
     difficulty_range=(0.1, 0.9),
     use_cache=True,
@@ -196,9 +198,9 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.5, 0.8),
-            "dynamic_friction_range": (0.4, 0.6),
-            "restitution_range": (0.0, 0.0),
+            # "static_friction_range": (0.5, 0.8),
+            # "dynamic_friction_range": (0.4, 0.6),
+            # "restitution_range": (0.0, 0.0),
             "num_buckets": 64,
         },
     )
@@ -243,7 +245,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "force_range": (-2.0, 2.0),
+            "force_range": (-4.0, 4.0),
             "torque_range": (-3.0, 3.0),
         },
     )
@@ -252,7 +254,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5),"roll": (-0.2, 0.2), "pitch": (-0.2, 0.2), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -277,10 +279,10 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(8.0, 12.0),
+        interval_range_s=(10.0, 15.0),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)},
+            "velocity_range": {"x": (-1.0, 1.0), "y": (-1.0, 1.0)},
         },
     )
 # -------------------
@@ -289,18 +291,33 @@ class EventCfg:
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    base_velocity = mdp.UniformLevelVelocityCommandCfg(
+    # base_velocity = mdp.UniformLevelVelocityCommandCfg(
+    #     asset_name="robot",
+    #     resampling_time_range=(5.0, 10.0),
+    #     rel_standing_envs=0.1,
+    #     rel_heading_envs=0.05,
+    #     # rel_rotate_only_envs=0.1,
+    #     debug_vis=True,
+    #     # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #     #     lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
+    #     # ),
+    #     limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
+    #         lin_vel_x=(-1.1, 1.1), lin_vel_y=(-0.4, 0.4), ang_vel_z=(-1.0, 1.0)
+    #     ),
+    # )
+    base_velocity = mdp.VelocityCommandWithRotateCfg(
         asset_name="robot",
         resampling_time_range=(5.0, 10.0),
         rel_standing_envs=0.1,
         rel_heading_envs=0.05,
-        # rel_rotate_only_envs=0.1,
+        rel_rotate_only_envs=0.1,
+        heading_command=True,
         debug_vis=True,
-        # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
-        # ),
-        limit_ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.1, 1.1), lin_vel_y=(-0.4, 0.4), ang_vel_z=(-1.0, 1.0)
+        ranges=mdp.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-1.0, 1.0),
+            ang_vel_z=(-1.0, 1.0),
+            heading=(-math.pi, math.pi),
         ),
     )
 
@@ -314,8 +331,6 @@ class ActionsCfg:
         scale=0.25, use_default_offset=True, clip={".*": (-100.0, 100.0)},
         preserve_order=True,
     )
-
-
 
 @configclass
 class ObservationsCfg:
@@ -443,7 +458,7 @@ class ObservationsCfg:
                 "offset": 0.3,
             },
             # clip=(-2.0, 5.0),
-            clip=(-2.0, 5.0),
+            clip=(-4.0, 5.0),
         )  # :contentReference[oaicite:18]{index=18}
 
         def __post_init__(self):
@@ -553,13 +568,13 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material = self.scene.terrain.physics_material
 
         # Set extended domain randomization parameters
-        # self.events.physics_material.params["static_friction_range"] = (0.7, 1.0)
-        # self.events.physics_material.params["dynamic_friction_range"] = (0.5, 0.8)
-        # self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
-        # self.events.add_base_mass.params["mass_distribution_params"] = (-0.5, 0.5)
-        # self.events.add_base_mass.params["recompute_inertia"] = True
-        self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
-        self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
-        self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
+        self.events.physics_material.params["static_friction_range"] = (0.7, 1.0)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.5, 0.8)
+        self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
+        self.events.add_base_mass.params["mass_distribution_params"] = (-0.5, 0.5)
         self.events.add_base_mass.params["recompute_inertia"] = True
+        # self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
+        # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
+        # self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
+        # self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
+        # self.events.add_base_mass.params["recompute_inertia"] = True

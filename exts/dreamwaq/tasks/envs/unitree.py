@@ -11,7 +11,7 @@ Reference: https://github.com/unitreerobotics/unitree_ros
 import os
 
 import isaaclab.sim as sim_utils
-from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg, ActuatorBaseCfg, DelayedPDActuatorCfg
+from isaaclab.actuators import IdealPDActuatorCfg, ImplicitActuatorCfg, ActuatorBaseCfg, DelayedPDActuatorCfg, DCMotorCfg
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.utils import configclass
 
@@ -121,8 +121,8 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
-            solver_position_iteration_count=8,
-            solver_velocity_iteration_count=2,
+            solver_position_iteration_count=4,
+            solver_velocity_iteration_count=1,
         ),
     ),
 
@@ -168,9 +168,9 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
             damping=0.7,
             # friction=0.01, # 0.01
             min_delay=0,
-            max_delay=2,
-            effort_limit_sim=33.5,
-            velocity_limit_sim=50
+            max_delay=5,
+            effort_limit_sim=23.5,
+            velocity_limit_sim=30
         ),
         "thigh_joints": DelayedPDActuatorCfg(
             joint_names_expr=[".*_thigh_joint"],
@@ -178,8 +178,8 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
             damping=0.7,
             # friction=0.01, # 0.01
             min_delay=0,
-            max_delay=2,
-            effort_limit_sim=33.5,
+            max_delay=5,
+            effort_limit_sim=23.5,
             velocity_limit_sim=28
         ),
         "calf_joints": DelayedPDActuatorCfg(
@@ -188,11 +188,22 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
             damping=0.7,
             # friction=0.01, # 0.01
             min_delay=0,
-            max_delay=2,
-            effort_limit_sim=33.5,
+            max_delay=5,
+            effort_limit_sim=23.5,
             velocity_limit_sim=28
         ),
     },
+    # actuators={
+    # "base_legs": DCMotorCfg(
+    #     joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
+    #     effort_limit=23.5,
+    #     saturation_effort=23.5,
+    #     velocity_limit=30.0,
+    #     stiffness=28.0,
+    #     damping=0.7,
+    #     friction=0.0,
+    # ),
+    # },
     joint_sdk_names=[
         "FL_hip_joint", "FL_thigh_joint", "FL_calf_joint",
         "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",

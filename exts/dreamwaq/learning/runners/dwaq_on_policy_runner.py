@@ -153,11 +153,6 @@ class DwaqOnPolicyRunner:
             return extras["observations"]["critic"]
         return torch.zeros(self.env.num_envs, self.true_vel_dim + self.disturb_force_dim, device=self.device)
 
-    def _normalize(self, tensor, rms):
-        if rms is None:
-            return tensor
-        return (tensor - rms.mean) / torch.sqrt(rms.var + 1e-6)
-
     def _compute_log(self, done_ids, infos):
         if len(done_ids) == 0:
             return
@@ -236,10 +231,8 @@ class DwaqOnPolicyRunner:
                     true_vel_norm = self._normalize(true_vel.clone(), self.true_vel_rms)
 
                     self.cenet.before_action(obs_history_flat, true_vel_norm)
-                    # actions = self.alg.act(actor_obs_input, critic_obs_input, obs_history=obs_history_flat)
                     actions = self.alg.act(actor_obs_input, critic_obs_input, obs_history=obs_history_flat)
                     
-
                     next_obs_dict, rewards, dones, infos = self.env.step(actions)
                     rewards = rewards.to(self.device)
                     dones = dones.to(self.device)

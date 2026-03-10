@@ -2,18 +2,20 @@
 
 from isaaclab.utils import configclass
 from .base import BaseRobotEnvCfg
+import exts.dreamwaq.envs.mdp as mdp
 
 # base environment configuration class for training
 @configclass
 class RobotEnvCfg(BaseRobotEnvCfg):
     def __init__(self, num_envs=4096, **kwargs):
         super().__init__(**kwargs)
+        # self.observations.policy.history_length=5
         self.num_envs = num_envs  # Environment Count for Training
         self.scene.num_envs = num_envs
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
         self.scene.terrain.terrain_generator.seed = 0
-        self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
+        # self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
         self.use_graphics = True  # Ensure graphics are enabled for training
         self.base_velocity = 1.0  # Some default value
         self.debug_vis = True  # Turn on debug visualization for training purposes
@@ -32,7 +34,23 @@ class PlayRobotEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
         self.use_graphics = True  # Ensure graphics are enabled for training
-        self.base_velocity = 1.0  # Some default value
+        self.base_velocity = 1.0 
+        # self.commands.base_velocity = mdp.VelocityCommandWithRotateCfg(
+        #     asset_name="robot",
+        #     resampling_time_range=(5.0, 10.0),
+        #     rel_standing_envs=0.1,
+        #     rel_heading_envs=0.05,
+        #     rel_rotate_only_envs=0.1,
+        #     heading_command=True,
+        #     debug_vis=True,
+        #     ranges=mdp.UniformVelocityCommandCfg.Ranges(
+        #         lin_vel_x=(-0.0, 0.0),
+        #         lin_vel_y=(-0.0, 0.0),
+        #         ang_vel_z=(-0.5, 0.5),
+        #         heading=(-0.1, 0.1),
+        #     ),
+        # )
+
         self.debug_vis = False  # Turn on debug visualization for training purposes
 
     def __post_init__(self):
