@@ -215,7 +215,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "mass_distribution_params": (-1.0, 3.0),
+            # "mass_distribution_params": (-1.0, 3.0),
             "operation": "add",
         },
     )
@@ -237,7 +237,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params": (-1.0, 1.0),
+            "stiffness_distribution_params": (-2.8, 2.8),
             "damping_distribution_params": (-0.1, 0.1),
             "operation": "add",
             "distribution": "uniform"
@@ -594,10 +594,10 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material = self.scene.terrain.physics_material
 
         # Set extended domain randomization parameters
-        self.events.physics_material.params["static_friction_range"] = (0.1, 2.5)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 2.5)
-        self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
-        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
+        self.events.physics_material.params["static_friction_range"] = (0.1, 3.16)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
+        self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
+        self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
         self.events.add_base_mass.params["recompute_inertia"] = True
         # self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
         # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
