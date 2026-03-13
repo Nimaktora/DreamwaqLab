@@ -136,6 +136,7 @@ class ActorCriticDwaq(nn.Module):
     # actor network inference - deterministic action (relatively)
     def act_inference(self, observations, obs_history):
         actor_in = self._build_actor_input(observations, obs_history)
+        # print(actor_in)
         return self.actor(actor_in)
     
     # PPO log

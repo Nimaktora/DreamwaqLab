@@ -46,6 +46,7 @@ class DwaqOnPolicyRunner:
     """On-policy runner for DWAQ training and evaluation."""
 
     def __init__(self, env: RslRlVecEnvWrapper, train_cfg, log_dir=None, device="cpu", **kwargs):
+        torch.set_printoptions(threshold=float('inf'))
         if not isinstance(train_cfg, dict):
             train_cfg = train_cfg.to_dict() if hasattr(train_cfg, "to_dict") else vars(train_cfg)
 
@@ -77,7 +78,7 @@ class DwaqOnPolicyRunner:
         self.height_map_scan_dim = max(privileged_obs.shape[1] - self.true_vel_dim - self.disturb_force_dim, 0)
 
         self.num_actor_obs = self.proprio_dim
-        self.num_critic_obs = privileged_obs.shape[1]
+        self.num_critic_obs = privileged_obs.shape[1] + self.num_actor_obs
         self.num_actions = self.env.num_actions
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
@@ -150,7 +151,14 @@ class DwaqOnPolicyRunner:
 
     def _get_privileged_obs(self, extras):
         if "observations" in extras and "critic" in extras["observations"]:
-            return extras["observations"]["critic"]
+            # print("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+            # print(extras["observations"]["critic"])
+            # 974848
+            priv = extras["observations"]["critic"]
+            # print(priv[:, self.proprio_dim:].numel)
+            return priv[:, self.proprio_dim:]
+        # else:
+        #     print("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         return torch.zeros(self.env.num_envs, self.true_vel_dim + self.disturb_force_dim, device=self.device)
 
     def _compute_log(self, done_ids, infos):
@@ -197,17 +205,18 @@ class DwaqOnPolicyRunner:
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
-
+# #!#$!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#
         obs_dict, extras = self.env.get_observations()
         obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
-        privileged_obs = self._get_privileged_obs(extras)
+        privileged_obs = self._get_privileged_obs(extras) # 238-45
+        critic_obs_input = torch.cat((obs, privileged_obs), dim=-1)
 
         if self.obs_rms is not None:
             self.obs_rms.update(obs.detach())
         if self.privileged_obs_rms is not None:
             self.privileged_obs_rms.update(privileged_obs.detach())
 
-        true_vel = privileged_obs[:, : self.est_vel_dim]
+        true_vel = privileged_obs[:, :self.est_vel_dim]
         if self.true_vel_rms is not None:
             self.true_vel_rms.update(true_vel.detach())
         # ------
@@ -240,8 +249,7 @@ class DwaqOnPolicyRunner:
                     else:
                         obs_history_flat = self.obs_history_buffer.view(self.env.num_envs, -1)
 
-                    # critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
-                    critic_obs_input = priv_obs_norm
+                    critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
                     actor_obs_input = obs_norm
                     self.cenet.before_action(obs_history_flat, true_vel_norm)
                     actions = self.alg.act(actor_obs_input, critic_obs_input, obs_history=obs_history_flat)
@@ -256,7 +264,7 @@ class DwaqOnPolicyRunner:
                     next_obs = next_obs_dict["policy"] if isinstance(next_obs_dict, dict) else next_obs_dict
                     next_extras = infos
                     next_privileged_obs = self._get_privileged_obs(next_extras)
-                    next_true_vel = next_privileged_obs[:, : self.est_vel_dim]
+                    next_true_vel = next_privileged_obs[:, :self.est_vel_dim]
                     done_ids = dones.nonzero(as_tuple=False).flatten()
 
                     if len(done_ids) > 0:
@@ -306,9 +314,8 @@ class DwaqOnPolicyRunner:
 
                 collection_time = time.time() - start
 
-                # critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
-                critic_obs_input = priv_obs_norm
-                self.alg.compute_returns(priv_obs_norm)
+                critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
+                self.alg.compute_returns(critic_obs_input)
 
             mean_loss = self.alg.update(it)
             if mean_loss is None:
@@ -505,3 +512,14 @@ class DwaqOnPolicyRunner:
                 self.true_vel_rms.mean.data.copy_(rms_data["true_vel_rms"]["mean"])
                 self.true_vel_rms.var.data.copy_(rms_data["true_vel_rms"]["var"])
                 self.true_vel_rms.count = rms_data["true_vel_rms"]["count"]
+        # print(self.env.scene["robot"].data.joint_names)
+        # print(self.obs_rms.mean.data)
+        # print(self.obs_rms.var.data)
+
+
+        # print(rms_data["obs_rms"]["mean"], rms_data["obs_rms"]["var"])
+        # print(rms_data["privileged_obs_rms"]["mean"], rms_data["privileged_obs_rms"]["var"]) 
+        # print(rms_data["true_vel_rms"]["mean"], rms_data["true_vel_rms"]["var"])
+# 491524096.0001
+# 491524096.0001
+# 491524096.0001

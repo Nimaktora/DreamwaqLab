@@ -26,8 +26,13 @@ from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from typing import Dict, Tuple, Sequence
 
+
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+from isaaclab.assets import Articulation, RigidObject
+# if TYPE_CHECKING:
+from isaaclab.envs import ManagerBasedEnv, ManagerBasedRLEnv
 
 ##################
 # Scene definition
@@ -353,6 +358,12 @@ class ObservationsCfg:
         #     noise=Unoise(n_min=-0.2, n_max=0.2),
         # )
         #  observations.py has errors
+        # def projected_gravity(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
+        #     """Gravity projection on the asset's root frame."""
+        #     # extract the used quantities (to enable type-hinting)
+        #     asset: RigidObject = env.scene[asset_cfg.name]
+        #     print(asset.data.projected_gravity_b)
+        #     return asset.data.projected_gravity_b
 
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
@@ -372,15 +383,25 @@ class ObservationsCfg:
             clip=(-100, 100),
         )
 
+        # joint_pos_rel = ObsTerm(
+        #     func=mdp_std.joint_pos_rel,
+        #     clip=(-100, 100),
+        # )
+
         joint_pos_rel = ObsTerm(
             func=mdp_std.joint_pos_rel,
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+            },
             clip=(-100, 100),
             noise=Unoise(n_min=-0.01, n_max=0.01),
         )
 
         joint_vel_rel = ObsTerm(
             func=mdp_std.joint_vel_rel,
-            # params={"max_lag_steps": 1},
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+            },
             clip=(-100, 100),
             noise=Unoise(n_min=-1.5, n_max=1.5),
         )
@@ -426,12 +447,17 @@ class ObservationsCfg:
 
         joint_pos_rel = ObsTerm(
             func=mdp_std.joint_pos_rel,
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+            },
             clip=(-100, 100),
         )
 
         joint_vel_rel = ObsTerm(
             func=mdp_std.joint_vel_rel,
-            # params={"max_lag_steps": 1},
+            params={
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+            },
             clip=(-100, 100),
         )
 
@@ -568,10 +594,10 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material = self.scene.terrain.physics_material
 
         # Set extended domain randomization parameters
-        self.events.physics_material.params["static_friction_range"] = (0.7, 1.0)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.5, 0.8)
+        self.events.physics_material.params["static_friction_range"] = (0.1, 2.5)
+        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 2.5)
         self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
-        self.events.add_base_mass.params["mass_distribution_params"] = (-0.5, 0.5)
+        self.events.add_base_mass.params["mass_distribution_params"] = (-1.0, 3.0)
         self.events.add_base_mass.params["recompute_inertia"] = True
         # self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
         # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
