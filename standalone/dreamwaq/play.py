@@ -188,6 +188,7 @@ def main():
     dummy_vel = torch.zeros(env.num_envs, vel_dim, device=runner.device)
 
     print("[INFO]: Starting inference loop...")
+    # print(env.scene["robot"].data.joint_names)
     
     # 6. Main Loop
     while simulation_app.is_running():
