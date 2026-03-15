@@ -34,22 +34,22 @@ class PlayRobotEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
         self.use_graphics = True  # Ensure graphics are enabled for training
-        self.base_velocity = 1.0 
-        self.commands.base_velocity = mdp.VelocityCommandWithRotateCfg(
-            asset_name="robot",
-            resampling_time_range=(1.0, 1.0),
-            # rel_standing_envs=1.0,
-            # rel_heading_envs=0.05,
-            rel_rotate_only_envs=1.0,
-            heading_command=False,
-            debug_vis=True,
-            ranges=mdp.UniformVelocityCommandCfg.Ranges(
-                lin_vel_x=(-0.0, 0.0),
-                lin_vel_y=(-0.0, 0.0),
-                ang_vel_z=(0.0, 0.0),
-                # heading=(-0.1, 0.1),
-            ),
-        )
+        # self.base_velocity = 1.0 
+        # self.commands.base_velocity = mdp.VelocityCommandWithRotateCfg(
+        #     asset_name="robot",
+        #     resampling_time_range=(1.0, 1.0),
+        #     # rel_standing_envs=1.0,
+        #     # rel_heading_envs=0.05,
+        #     rel_rotate_only_envs=1.0,
+        #     heading_command=False,
+        #     debug_vis=True,
+        #     ranges=mdp.UniformVelocityCommandCfg.Ranges(
+        #         lin_vel_x=(-0.0, 0.0),
+        #         lin_vel_y=(-0.0, 0.0),
+        #         ang_vel_z=(0.0, 0.0),
+        #         # heading=(-0.1, 0.1),
+        #     ),
+        # )
 
         self.debug_vis = False  # Turn on debug visualization for training purposes
 

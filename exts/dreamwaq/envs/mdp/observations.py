@@ -167,10 +167,10 @@ def body_vel(
     base_idx = _get_body_index(asset, base_body_names)
     return asset.data.body_lin_vel_w[:, base_idx, :].view(env.num_envs, -1)
 
-def disturbance_force(
+def trunk_disturbance_force(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    base_body_names: tuple[str, ...] = ("base", "trunk", "torso", "pelvis", "base_link"),
+    base_body_names: tuple[str, ...] = ("trunk"),
 ) -> torch.Tensor:
     asset: Articulation = env.scene[asset_cfg.name]
     force = asset._external_force_b  # type: ignore
@@ -180,6 +180,7 @@ def disturbance_force(
     base_idx = _get_body_index(asset, base_body_names)
     return force[:, base_idx, :].view(env.num_envs, -1)
 
+# TODO:check this 
 def base_external_force(
     env: ManagerBasedRLEnv,
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),

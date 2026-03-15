@@ -102,13 +102,13 @@ class RobotSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=COBBLESTONE_ROAD_CFG,  # None, ROUGH_TERRAINS_CFG
-        max_init_terrain_level=5,
+        max_init_terrain_level=4,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
             restitution_combine_mode="multiply",
-            # static_friction=1.0,
-            # dynamic_friction=1.0,
+            static_friction=1.0,
+            dynamic_friction=1.0,
         ),
         visual_material=sim_utils.MdlFileCfg(
             mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
@@ -150,7 +150,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
 @configclass
 class EventCfg:
     """Configuration for events."""
-    pass
+    # pass
     
     # def reset_policy_obs_delay(env, env_ids: Sequence[int], lag_ranges: dict):
     #     """
@@ -202,10 +202,10 @@ class EventCfg:
         func=mdp.randomize_rigid_body_material,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            # "static_friction_range": (0.5, 0.8),
-            # "dynamic_friction_range": (0.4, 0.6),
-            # "restitution_range": (0.0, 0.0),
+            "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
+            "static_friction_range": (0.10, 3.0),
+            "dynamic_friction_range": (1.0, 3.0),
+            "restitution_range": (0.0, 1.0),
             "num_buckets": 64,
         },
     )
@@ -215,7 +215,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            # "mass_distribution_params": (-1.0, 3.0),
+            "mass_distribution_params": (-2.0, 3.0),
             "operation": "add",
         },
     )
@@ -238,7 +238,7 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "stiffness_distribution_params": (-2.8, 2.8),
-            "damping_distribution_params": (-0.1, 0.1),
+            "damping_distribution_params": (-0.14, 0.14),
             "operation": "add",
             "distribution": "uniform"
         },
@@ -250,7 +250,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "force_range": (-4.0, 4.0),
+            "force_range": (-15.0, 15.0),
             "torque_range": (-3.0, 3.0),
         },
     )
@@ -259,7 +259,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5),"roll": (-0.2, 0.2), "pitch": (-0.2, 0.2), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.2, 0.2), "pitch": (-0.2, 0.2), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -275,6 +275,7 @@ class EventCfg:
         func=mdp.reset_joints_by_scale,
         mode="reset",
         params={
+            "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "position_range": (0.5, 1.5),
             "velocity_range": (0.5, 1.5),
         },
@@ -333,7 +334,12 @@ class ActionsCfg:
 # TODO : action noise 넣기  
     JointPositionAction = mdp.JointPositionActionWithHistoryCfg(
         asset_name="robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, 
-        scale=0.25, use_default_offset=True, clip={".*": (-100.0, 100.0)},
+        scale={
+            ".*_thigh_joint": 0.25,
+            ".*_calf_joint" : 0.25,
+            ".*hip_joint": 0.5*0.25,                 
+        }, 
+        use_default_offset=True, clip={".*": (-100.0, 100.0)},
         preserve_order=True,
     )
 
@@ -409,6 +415,7 @@ class ObservationsCfg:
         last_action = ObsTerm(
             func=mdp_std.last_action,  # was: mdp.last_action
             clip=(-100, 100),
+            # scale=
         )  # :contentReference[oaicite:9]{index=9}
 
         def __post_init__(self):
@@ -473,7 +480,7 @@ class ObservationsCfg:
         )  # :contentReference[oaicite:16]{index=16}
 
         disturbance_force = ObsTerm(
-            func=mdp.base_external_force,
+            func=mdp.trunk_disturbance_force,
             clip=(-100, 100),
         )  # :contentReference[oaicite:17]{index=17}
 
@@ -594,10 +601,10 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physics_material = self.scene.terrain.physics_material
 
         # Set extended domain randomization parameters
-        self.events.physics_material.params["static_friction_range"] = (0.1, 3.16)
-        self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
-        self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
-        self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
+        # self.events.physics_material.params["static_friction_range"] = (0.1, 3.16)
+        # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
+        # self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
+        # self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
         self.events.add_base_mass.params["recompute_inertia"] = True
         # self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
         # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)

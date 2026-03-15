@@ -334,6 +334,7 @@ class CENet(nn.Module):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return mu + eps*std
+        # return mu
 
     # input dim -> THIS FUNCTION -> latent vector / CENet output / reparamterized values
     def forward(self, obs_history):
@@ -435,7 +436,7 @@ class CENet(nn.Module):
         self.storage.clear()
 
         # Update beta
-        self.beta = min(self.beta * 1.01, self.beta_limit)
+        # self.beta = min(self.beta * 1.01, self.beta_limit)
         return mean_vae_loss, mean_vel_loss, mean_recon_loss, mean_kl_loss     
 
 # Activation function  

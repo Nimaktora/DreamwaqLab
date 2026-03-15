@@ -194,6 +194,7 @@ def main():
     while simulation_app.is_running():
         with torch.inference_mode():
             # (A) Normalize Observation
+            # print(obs)
             obs_norm = obs.clone()
             if obs_rms is not None:
                 obs_norm = (obs_norm - obs_rms.mean) / torch.sqrt(obs_rms.var + 1e-6)
@@ -201,8 +202,10 @@ def main():
             # (B) Normalize History
             if obs_rms is not None:
                 history_norm = (runner.obs_history_buffer - obs_rms.mean) / torch.sqrt(obs_rms.var + 1e-6)
+                # print("aaa")
             else:
                 history_norm = runner.obs_history_buffer
+                # print("bbb")
 
             obs_history_flat = history_norm.view(env.num_envs, -1)
 
@@ -212,6 +215,8 @@ def main():
 
             # (E) Action
             actions = runner.alg.actor_critic.act_inference(actor_obs_input, obs_history_flat)
+
+            # actions = torch.zeros(1,12)
             
             # (F) Step
             next_obs, rewards, dones, infos = env.step(actions)
