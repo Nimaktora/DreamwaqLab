@@ -11,7 +11,7 @@ import torch
 from isaaclab.assets import Articulation
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.envs import ManagerBasedRLEnv
-from isaaclab.utils.math import wrap_to_pi
+import isaaclab.utils.math as utils
 from typing import Sequence, Union
 
 if TYPE_CHECKING:
@@ -191,10 +191,50 @@ def penalty_body_height(
 # Foot : FL_foot, FR_foot, RL_foot, RR_foot
 # foot clearance 계산 시 속도 항을 velocity로할 것인가 speed로 할 것인가?
 # 논리적으로는 speed가 맞는 것으로 보이나 논문 상에서는 velocity로 되어 있음?? 머임 일단 난 speed로 햇음
+# def penalty_foot_clearance(
+#     env: ManagerBasedRLEnv,
+#     foot_body_names: Sequence[str],
+#     clearance_des: Union[Sequence[float], torch.Tensor],  # (F,) or (N,F) only
+#     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+# ) -> torch.Tensor:
+#     robot = _get_robot(env, asset_cfg)
+
+#     # --- body indices ---
+#     foot_ids: list[int] = []
+#     for name in foot_body_names:
+#         ids = robot.find_bodies(name)
+#         if len(ids) > 0:
+#             foot_ids.append(int(ids[0][0]))
+
+#     if len(foot_ids) == 0:
+#         ids = robot.find_bodies(".*foot.*")
+#         foot_ids = [int(i) for i in ids] if len(ids) > 0 else []
+
+#     if len(foot_ids) == 0:
+#         raise RuntimeError(
+#             "No foot bodies found. Check foot_body_names or robot body names."
+#         )
+
+#     # --- kinematics ---
+#     env.command_manager.get_command
+#     foot_pos_z_des = robot.data.joint_pos_target
+#     foot_pos_z_real = robot.data.com_pos_b[:, foot_ids, 2]      # (N, F, 3)
+#     foot_vel = robot.data.body_com_vel_w[:, foot_ids, :] - robot.data.root_lin_vel_b # (N, F, 3)
+#                                # (N, F)
+#     vxy = foot_vel[:, :, 0:2]                             # (N, F, 2)
+#     speed_xy = torch.linalg.norm(vxy, dim=2)              # (N, F)
+
+#     N, F = pz.shape
+
+#     # --- compute penalty ---
+#     err = clearance_des_t - pz                             # (N, F)
+#     penalty = (err ** 2) * speed_xy                        # (N, F)
+
+#     return torch.sum(penalty, dim=1)                       # (N,)
 def penalty_foot_clearance(
     env: ManagerBasedRLEnv,
     foot_body_names: Sequence[str],
-    clearance_des: Union[Sequence[float], torch.Tensor],  # (F,) or (N,F) only
+    clearance_des: Union[Sequence[float], torch.Tensor],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
     robot = _get_robot(env, asset_cfg)
@@ -214,51 +254,22 @@ def penalty_foot_clearance(
         raise RuntimeError(
             "No foot bodies found. Check foot_body_names or robot body names."
         )
-
-    # --- kinematics ---
-    foot_pos = robot.data.body_pos_w[:, foot_ids, :]      # (N, F, 3)
-    foot_vel = robot.data.body_lin_vel_w[:, foot_ids, :]  # (N, F, 3)
-
-    pz = foot_pos[:, :, 2]                                # (N, F)
-    vxy = foot_vel[:, :, 0:2]                             # (N, F, 2)
-    speed_xy = torch.linalg.norm(vxy, dim=2)              # (N, F)
-
-    N, F = pz.shape
-
-    # --- normalize clearance_des to shape (N, F) ---
-    if isinstance(clearance_des, torch.Tensor):
-        if clearance_des.ndim == 1:
-            if clearance_des.numel() != F:
-                raise ValueError(f"clearance_des shape must be (F,) with F={F}")
-            clearance_des_t = clearance_des.to(
-                device=pz.device, dtype=pz.dtype
-            ).view(1, F).expand(N, F)
-
-        elif clearance_des.ndim == 2:
-            if clearance_des.shape != (N, F):
-                raise ValueError(
-                    f"clearance_des shape must be (N,F)={(N,F)}, got {tuple(clearance_des.shape)}"
-                )
-            clearance_des_t = clearance_des.to(
-                device=pz.device, dtype=pz.dtype
-            )
-
-        else:
-            raise ValueError("clearance_des tensor must be 1D (F,) or 2D (N,F)")
-
-    else:
-        # Sequence[float] -> (F,)
-        if len(clearance_des) != F:
-            raise ValueError(f"clearance_des length must be F={F}")
-        clearance_des_t = torch.tensor(
-            clearance_des, device=pz.device, dtype=pz.dtype
-        ).view(1, F).expand(N, F)
-
-    # --- compute penalty ---
-    err = clearance_des_t - pz                             # (N, F)
-    penalty = (err ** 2) * speed_xy                        # (N, F)
-
-    return torch.sum(penalty, dim=1)                       # (N,)
+    clearance_des_t = torch.tensor(
+        clearance_des,
+        device=env.device,
+        dtype=float,
+    ).view(1, -1).expand(env.num_envs, -1)
+    cur_footpos_translated = robot.data.body_com_pos_w[:, foot_ids, 0:3] - robot.data.root_com_pose_w[:, 0:3].unsqueeze(1)
+    footpos_in_body_frame = torch.zeros(env.num_envs, 4, 3, device=env.device)
+    cur_footvel_translated = robot.data.body_com_vel_w[:, foot_ids, 0:3] - robot.data.root_com_vel_w[:, 0:3].unsqueeze(1)
+    footvel_in_body_frame = torch.zeros(env.num_envs, 4, 3, device=env.device)
+    for i in range(4):
+        footpos_in_body_frame[:, i, :] = utils.quat_apply_inverse(robot.data.root_quat_w, cur_footpos_translated[:, i, :])
+        footvel_in_body_frame[:, i, :] = utils.quat_apply_inverse(robot.data.root_quat_w, cur_footvel_translated[:, i, :])
+    
+    height_error = torch.square(footpos_in_body_frame[:, :, 2] - clearance_des_t).view(env.num_envs, -1)
+    foot_leteral_vel = torch.sqrt(torch.sum(torch.square(footvel_in_body_frame[:, :, :2]), dim=2)).view(env.num_envs, -1)
+    return torch.sum(height_error * foot_leteral_vel, dim=1)
 
 
 # 10) Action rate: (a_t - a_{t-1})^2

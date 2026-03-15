@@ -219,6 +219,14 @@ class EventCfg:
             "operation": "add",
         },
     )
+    randomize_rigid_body_com = EventTerm(
+        func=mdp.randomize_rigid_body_com,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
+            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+        },
+    )
 # -------------------
     # random_joint_params = EventTerm(
     #     func=mdp.randomize_joint_parameters,
@@ -237,7 +245,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params": (-2.8, 2.8),
+            "stiffness_distribution_params": (-5.6, 5.6),
             "damping_distribution_params": (-0.14, 0.14),
             "operation": "add",
             "distribution": "uniform"
@@ -507,30 +515,46 @@ class RewardsCfg:
 
     # == Rewards ==
     lin_vel_tracking = RewTerm(
-        func=mdp.reward_lin_vel_tracking,
+        func=mdp_std.track_lin_vel_xy_exp,
         weight=1.0, 
-        params={"command_name": "base_velocity"}
-    )
+        params={"command_name": "base_velocity",
+                "std": math.sqrt(0.25)}
+                )
 
     ang_vel_tracking = RewTerm(
-        func=mdp.reward_ang_vel_tracking,
+        func=mdp_std.track_ang_vel_z_exp,
         weight=0.5, 
-        params={"command_name": "base_velocity"}
-    )
+        params={"command_name": "base_velocity",
+                "std": math.sqrt(0.25)}
+                )
 
     # == Penalty ==
-    lin_vel_z = RewTerm(func=mdp.penalty_lin_vel_z,weight=-2.0)
-    ang_vel_xy = RewTerm(func=mdp.penalty_ang_vel_xy, weight=-0.05)
-    orientation_gravity = RewTerm(func=mdp.penalty_orientation_gravity, weight=-0.2)
-    joint_accel = RewTerm(func=mdp.penalty_joint_accel, weight=-2.5e-7)
+    lin_vel_z = RewTerm(
+        func=mdp_std.lin_vel_z_l2,
+        weight=-2.0
+        )
+    
+    ang_vel_xy = RewTerm(
+        func=mdp_std.ang_vel_xy_l2, 
+        weight=-0.05
+        )
+    
+    orientation_gravity = RewTerm(func=mdp_std.flat_orientation_l2, weight=-0.2)
+    joint_accel = RewTerm(func=mdp_std.joint_acc_l2, weight=-2.5e-7)
     joint_power = RewTerm(func=mdp.penalty_joint_power, weight=-2e-5)
     body_height = RewTerm(
-    func=mdp.penalty_body_height, weight=-1.0, params={"h_des": 0.30})
+            func=mdp_std.base_height_l2, 
+            weight=-1.0, 
+            params={
+                "target_height": 0.3,
+                # "sensor_cfg": SceneEntityCfg("base_height_scanner"),
+            },
+        )
     foot_clearance = RewTerm(func=mdp.penalty_foot_clearance, weight=-0.01,
                              params={
                                  "foot_body_names": ["FL_foot", "FR_foot", "RL_foot", "RR_foot"],
-                                 "clearance_des": [0.05, 0.05, 0.05, 0.05],})
-    action_rate = RewTerm(func=mdp.penalty_action_rate, weight=-0.01)
+                                 "clearance_des": [-0.2, -0.2, -0.2, -0.2],})
+    action_rate = RewTerm(func=mdp_std.action_rate_l2, weight=-0.01)
     action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
     power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
 

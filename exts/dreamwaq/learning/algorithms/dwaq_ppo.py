@@ -27,8 +27,8 @@ class PPOWAQ:
     def __init__(
         self,
         actor_critic=ActorCriticDwaq,
-        num_learning_epochs=1,
-        num_mini_batches=1,
+        num_learning_epochs=5,
+        num_mini_batches=4,
         clip_param=0.2,
         gamma=0.998,
         lam=0.95,
