@@ -102,7 +102,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
         terrain_generator=COBBLESTONE_ROAD_CFG,  # None, ROUGH_TERRAINS_CFG
-        max_init_terrain_level=4,
+        max_init_terrain_level=1,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="multiply",
@@ -129,7 +129,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
         debug_vis=False,
         mesh_prim_paths=["/World/ground"],
     )
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/trunk.*", history_length=3, track_air_time=True)
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*", history_length=3, track_air_time=True)
     # lights
     # light = AssetBaseCfg(
     #     prim_path="/World/light",
@@ -203,8 +203,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
-            "static_friction_range": (0.10, 3.0),
-            "dynamic_friction_range": (0.1, 3.0),
+            "static_friction_range": (0.10, 2.5),
+            "dynamic_friction_range": (0.1, 2.5),
             "restitution_range": (0.0, 1.0),
             "num_buckets": 64,
         },
@@ -258,8 +258,8 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "force_range": (-15.0, 15.0),
-            "torque_range": (-3.0, 3.0),
+            "force_range": (-10.0, 10.0),
+            "torque_range": (-2.0, 2.0),
         },
     )
 # -------------------
@@ -267,7 +267,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.25, 0.25), "pitch": (-0.25, 0.25), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.1, 0.1), "pitch": (-0.1, 0.1), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -285,7 +285,7 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
             "position_range": (0.5, 1.5),
-            "velocity_range": (0.5, 1.5),
+            "velocity_range": (0.0, 0.0),
         },
     )
 
@@ -293,7 +293,7 @@ class EventCfg:
     push_robot = EventTerm(
         func=mdp.push_by_setting_velocity,
         mode="interval",
-        interval_range_s=(10.0, 15.0),
+        interval_range_s=(8.0, 12.0),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
             "velocity_range": {"x": (-1.0, 1.0), "y": (-1.0, 1.0)},
@@ -328,9 +328,9 @@ class CommandsCfg:
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.0),
-            lin_vel_y=(-1.0, 1.0),
-            ang_vel_z=(-1.0, 1.0),
+            lin_vel_x=(-1.5, 1.5),
+            lin_vel_y=(-1.5, 1.5),
+            ang_vel_z=(-1.5, 1.5),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -572,9 +572,9 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp_std.time_out, time_out=True)
     base_contact = DoneTerm(
         func=mdp_std.illegal_contact,
-        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="trunk"), "threshold": 1.0},
+        params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names=["trunk",".*_hip"]), "threshold": 1.0},
     )
-    bad_orientation = DoneTerm(func=mdp_std.bad_orientation, params={"limit_angle": 0.8})
+    # bad_orientation = DoneTerm(func=mdp_std.bad_orientation, params={"limit_angle": 0.8})
 
 @configclass
 class CurriculumCfg:
