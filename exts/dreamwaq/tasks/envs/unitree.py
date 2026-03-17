@@ -55,7 +55,7 @@ class UnitreeUrdfFileCfg(sim_utils.UrdfFileCfg):
     activate_contact_sensors: bool = True
     replace_cylinders_with_capsules = True
     joint_drive = sim_utils.UrdfConverterCfg.JointDriveCfg(
-        gains=sim_utils.UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=0, damping=0)
+        gains=sim_utils.UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=None, damping=None)
     )
     articulation_props = sim_utils.ArticulationRootPropertiesCfg(
         enabled_self_collisions=True,
@@ -106,10 +106,13 @@ class UnitreeUrdfFileCfg(sim_utils.UrdfFileCfg):
 #     # decimation: Number of control action updates @ sim DT per policy DT
 #     decimation = 4
 
+
+
 UNITREE_GO1_CFG = UnitreeArticulationCfg(
     spawn=UnitreeUrdfFileCfg(
         asset_path="/home/jaeyeolkim/Documents/GitHub/DreamwaqLab/exts/dreamwaq/tasks/envs/urdf/go1.urdf",
         activate_contact_sensors=True, 
+        replace_cylinders_with_capsules = True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
             retain_accelerations=False,
@@ -121,8 +124,8 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False,
-            solver_position_iteration_count=4,
-            solver_velocity_iteration_count=0,
+            solver_position_iteration_count=8,
+            solver_velocity_iteration_count=4,
         ),
     ),
 

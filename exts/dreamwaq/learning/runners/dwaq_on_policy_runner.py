@@ -512,6 +512,29 @@ class DwaqOnPolicyRunner:
                 self.true_vel_rms.mean.data.copy_(rms_data["true_vel_rms"]["mean"])
                 self.true_vel_rms.var.data.copy_(rms_data["true_vel_rms"]["var"])
                 self.true_vel_rms.count = rms_data["true_vel_rms"]["count"]
+
+
+        # from exts.dreamwaq.tasks.envs.unitree import UNITREE_GO1_CFG
+        # from isaaclab.managers import SceneEntityCfg
+        # from isaaclab.envs import ManagerBasedRLEnv
+        # from isaaclab.assets import Articulation
+        # from typing import TYPE_CHECKING
+        # if TYPE_CHECKING:
+        #     from isaaclab.envs import ManagerBasedRLEnv
+        # import exts.dreamwaq.envs.mdp.rewards as mdp
+        # # def _get_robot(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> Articulation:
+        # #     return env.scene[asset_cfg.name]
+
+
+
+        # asset_cfg = SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+        # env = ManagerBasedRLEnv(asset_cfg)
+        # # asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        # robot = mdp._get_robot(env, asset_cfg)
+
+        # print("requested joint names:", UNITREE_GO1_CFG.joint_sdk_names)
+        # print("resolved joint ids:", asset_cfg.joint_ids)
+        # print("resolved joint names:", [robot.data.joint_names[i] for i in asset_cfg.joint_ids])
         # print(self.env.scene["robot"].data.joint_names)
         # print(self.obs_rms.mean.data)
         # print(self.obs_rms.var.data)

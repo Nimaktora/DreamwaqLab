@@ -204,7 +204,7 @@ class EventCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "static_friction_range": (0.10, 3.0),
-            "dynamic_friction_range": (1.0, 3.0),
+            "dynamic_friction_range": (0.1, 3.0),
             "restitution_range": (0.0, 1.0),
             "num_buckets": 64,
         },
@@ -267,7 +267,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.2, 0.2), "pitch": (-0.2, 0.2), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.25, 0.25), "pitch": (-0.25, 0.25), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -382,6 +382,7 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
             clip=(-100, 100),
+            scale=0.25,
             noise=Unoise(n_min=-0.2, n_max=0.2),
         )
 
@@ -394,6 +395,7 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(
             func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
+            scale=(2.0, 2.0, 0.25),
             clip=(-100, 100),
         )
 
@@ -417,6 +419,7 @@ class ObservationsCfg:
                 "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
             },
             clip=(-100, 100),
+            scale=0.05,
             noise=Unoise(n_min=-1.5, n_max=1.5),
         )
 
@@ -446,6 +449,7 @@ class ObservationsCfg:
         # policy obs (no noise by default for critic)
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
+            scale=0.25,
             clip=(-100, 100),
         )
 
@@ -457,6 +461,7 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(
             func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
+            scale=(2.0, 2.0, 0.25),
             clip=(-100, 100),
         )
 
@@ -473,6 +478,7 @@ class ObservationsCfg:
             params={
                 "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
             },
+            scale=0.05,
             clip=(-100, 100),
         )
 
@@ -557,17 +563,18 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp_std.action_rate_l2, weight=-0.01)
     action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
     power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
+    stand_still = RewTerm(func=mdp.penalty_stand_still, weight=-0.1)
 
 @configclass
 class TerminationsCfg:
     """Termination terms for the MDP."""
 
-    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+    time_out = DoneTerm(func=mdp_std.time_out, time_out=True)
     base_contact = DoneTerm(
-        func=mdp.illegal_contact,
+        func=mdp_std.illegal_contact,
         params={"sensor_cfg": SceneEntityCfg("contact_forces", body_names="trunk"), "threshold": 1.0},
     )
-    bad_orientation = DoneTerm(func=mdp.bad_orientation, params={"limit_angle": 0.8})
+    bad_orientation = DoneTerm(func=mdp_std.bad_orientation, params={"limit_angle": 0.8})
 
 @configclass
 class CurriculumCfg:
@@ -635,3 +642,30 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         # self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
         # self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
         # self.events.add_base_mass.params["recompute_inertia"] = True
+
+
+
+
+
+        # from exts.dreamwaq.tasks.envs.unitree import UNITREE_GO1_CFG
+        # from isaaclab.managers import SceneEntityCfg
+        # from isaaclab.envs import ManagerBasedRLEnv
+        # from isaaclab.assets import Articulation
+        # from typing import TYPE_CHECKING
+        # if TYPE_CHECKING:
+        #     from isaaclab.envs import ManagerBasedRLEnv
+        # import exts.dreamwaq.envs.mdp.rewards as mdp
+        # def _get_robot(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> Articulation:
+        #     return env.scene[asset_cfg.name]
+
+
+
+        # asset_cfg = SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+        # env = ManagerBasedRLEnv(asset_cfg.name)
+        # # asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        # # robot = mdp.rewards._get_robot(env, asset_cfg)
+        
+        # print("requested joint names:", UNITREE_GO1_CFG.joint_sdk_names)
+        # print("resolved joint ids:", asset_cfg.joint_ids)
+        # print("joint_ids:", asset_cfg.joint_ids)
+        # print("joint_names:", asset_cfg.joint_names)

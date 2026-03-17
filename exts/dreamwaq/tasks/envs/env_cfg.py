@@ -34,7 +34,7 @@ class PlayRobotEnvCfg(RobotEnvCfg):
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
         self.use_graphics = True  # Ensure graphics are enabled for training
-        # self.base_velocity = 1.0 
+        self.base_velocity = 1.0 
         # self.commands.base_velocity = mdp.VelocityCommandWithRotateCfg(
         #     asset_name="robot",
         #     resampling_time_range=(1.0, 1.0),

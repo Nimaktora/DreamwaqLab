@@ -306,3 +306,12 @@ def penalty_power_distribution_var(
     # joint-wise variance per env
     var = torch.var(power, dim=-1)
     return torch.square(var)
+
+def penalty_stand_still(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    robot = _get_robot(env, asset_cfg)
+    # Penalize motion at zero commands
+    return torch.sum(torch.abs(robot.data.joint_pos[:, asset_cfg.joint_ids] - robot.data.default_joint_pos[:, asset_cfg.joint_ids]), dim=1) \
+        * (torch.norm(env.command_manager.get_command("base_velocity")[:, :2], dim=1) < 0.1)
