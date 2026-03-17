@@ -382,7 +382,7 @@ class ObservationsCfg:
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
             clip=(-100, 100),
-            scale=0.25,
+            # scale=0.25,
             noise=Unoise(n_min=-0.2, n_max=0.2),
         )
 
@@ -395,7 +395,7 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(
             func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
-            scale=(2.0, 2.0, 0.25),
+            # scale=(2.0, 2.0, 0.25),
             clip=(-100, 100),
         )
 
@@ -419,7 +419,7 @@ class ObservationsCfg:
                 "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
             },
             clip=(-100, 100),
-            scale=0.05,
+            # scale=0.05,
             noise=Unoise(n_min=-1.5, n_max=1.5),
         )
 
@@ -449,7 +449,7 @@ class ObservationsCfg:
         # policy obs (no noise by default for critic)
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
-            scale=0.25,
+            # scale=0.25,
             clip=(-100, 100),
         )
 
@@ -461,7 +461,7 @@ class ObservationsCfg:
         velocity_commands = ObsTerm(
             func=mdp_std.generated_commands,
             params={"command_name": "base_velocity"},
-            scale=(2.0, 2.0, 0.25),
+            # scale=(2.0, 2.0, 0.25),
             clip=(-100, 100),
         )
 
@@ -478,7 +478,7 @@ class ObservationsCfg:
             params={
                 "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
             },
-            scale=0.05,
+            # scale=0.05,
             clip=(-100, 100),
         )
 
