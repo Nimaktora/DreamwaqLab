@@ -311,7 +311,7 @@ class CommandsCfg:
     #     rel_standing_envs=0.1,
     #     rel_heading_envs=0.05,
     #     # rel_rotate_only_envs=0.1,
-    #     debug_vis=True,
+    #     debug_vis=True,standalone/dreamwaq/logs/rsl_rl/dwaq/2026-03-17_17-46-35/model_2750.pt
     #     # ranges=mdp.UniformLevelVelocityCommandCfg.Ranges(
     #     #     lin_vel_x=(-0.1, 0.1), lin_vel_y=(-0.1, 0.1), ang_vel_z=(-1, 1)
     #     # ),
@@ -321,16 +321,16 @@ class CommandsCfg:
     # )
     base_velocity = mdp.VelocityCommandWithRotateCfg(
         asset_name="robot",
-        resampling_time_range=(5.0, 10.0),
+        resampling_time_range=(10.0, 15.0),
         rel_standing_envs=0.1,
         rel_heading_envs=0.05,
         rel_rotate_only_envs=0.1,
         heading_command=True,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.5, 1.5),
-            lin_vel_y=(-1.5, 1.5),
-            ang_vel_z=(-1.5, 1.5),
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-1.0, 1.0),
+            ang_vel_z=(-1.0, 1.0),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -522,14 +522,14 @@ class RewardsCfg:
     # == Rewards ==
     lin_vel_tracking = RewTerm(
         func=mdp_std.track_lin_vel_xy_exp,
-        weight=1.0, 
+        weight=1.5, 
         params={"command_name": "base_velocity",
                 "std": math.sqrt(0.25)}
                 )
 
     ang_vel_tracking = RewTerm(
         func=mdp_std.track_ang_vel_z_exp,
-        weight=0.5, 
+        weight=1.0, 
         params={"command_name": "base_velocity",
                 "std": math.sqrt(0.25)}
                 )
@@ -562,7 +562,7 @@ class RewardsCfg:
                                  "clearance_des": [-0.2, -0.2, -0.2, -0.2],})
     action_rate = RewTerm(func=mdp_std.action_rate_l2, weight=-0.01)
     action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
-    power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
+    # power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
     stand_still = RewTerm(func=mdp.penalty_stand_still, weight=-0.1)
 
 @configclass
