@@ -2,6 +2,7 @@ import os
 import torch
 import math
 import isaaclab.sim as sim_utils
+from isaaclab.sim import PhysxCfg, SimulationCfg, RenderCfg 
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
 from isaaclab.envs import ManagerBasedRLEnvCfg, ManagerBasedRLEnv
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -123,7 +124,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
     # sensors
     height_scanner = RayCasterCfg(
         prim_path="{ENV_REGEX_NS}/Robot/trunk",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 0.3)),
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
         debug_vis=False,
@@ -241,14 +242,14 @@ class EventCfg:
     random_actuator_gains = EventTerm(
         func=mdp.randomize_actuator_gains,
         # min_step_count_between_reset=720
-        # mode="reset"
+        # mode="reset",
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params": (-5.6, 5.6),
-            "damping_distribution_params": (-0.14, 0.14),
-            "operation": "add",
-            "distribution": "uniform"
+            "stiffness_distribution_params": (0.9, 1.1),
+            "damping_distribution_params": (0.9, 1.1),
+            "operation": "scale",
+            "distribution": "uniform",
         },
     )
 
@@ -502,7 +503,7 @@ class ObservationsCfg:
             func=mdp_std.height_scan,
             params={
                 "sensor_cfg": SceneEntityCfg("height_scanner"),
-                "offset": 0.3,
+                # "offset": 0.3,
             },
             # clip=(-2.0, 5.0),
             clip=(-4.0, 5.0),
@@ -553,6 +554,7 @@ class RewardsCfg:
             weight=-1.0, 
             params={
                 "target_height": 0.3,
+                "asset_cfg": SceneEntityCfg("robot", body_names="base")
                 # "sensor_cfg": SceneEntityCfg("base_height_scanner"),
             },
         )
@@ -589,16 +591,18 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the locomotion velocity-tracking environment."""
 
     # Scene settings
-    scene: RobotSceneCfg = RobotSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene_cfg = RobotSceneCfg
     # Basic settings
-    observations: ObservationsCfg = ObservationsCfg()
-    actions: ActionsCfg = ActionsCfg()
-    commands: CommandsCfg = CommandsCfg()
+    observations = ObservationsCfg()
+    actions = ActionsCfg()
+    commands = CommandsCfg()
     # MDP settings
-    rewards: RewardsCfg = RewardsCfg()
-    terminations: TerminationsCfg = TerminationsCfg()
-    events: EventCfg = EventCfg()
-    curriculum: CurriculumCfg = CurriculumCfg()
+    rewards = RewardsCfg()
+    terminations = TerminationsCfg()
+    events = EventCfg()
+    curriculum = CurriculumCfg()
+
+    
 
     def __post_init__(self):
         """Post initialization."""
@@ -608,13 +612,34 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         # simulation settings
         self.sim.dt = 0.005
         self.sim.render_interval = self.decimation
-        self.sim.physics_material = self.scene.terrain.physics_material
+        # self.sim.physics_material = self.scene.terrain.physics_material
         self.sim.physx.gpu_max_rigid_patch_count = 10 * 2**15
+        self.sim.disable_contact_processing = True
+        #self.actions.joint_pos.scale = 0.25
+        self.sim.physx = PhysxCfg(
+                    # [핵심] 0: PGS (Gym과 동일, 빠름), 1: TGS (Isaac Lab 기본, 느림)
+                    solver_type=1, 
+                    
+                    # [핵심] 반복 횟수 명시 (Gym 기본값)
+                    min_position_iteration_count=4,
+                    min_velocity_iteration_count=1,
+                    
+                    # [성능] CCD는 뚫림 방지용이나 매우 느립니다. 속도를 위해 끄세요.
+                    enable_ccd=False, 
+                    
+                    # [안정성] 지형 위에서의 떨림 방지
+                    enable_stabilization=True, 
+                    
+                    # [GPU 최적화] GPU 버퍼 및 쓰레드 설정 (추가 권장)
+                    #num_threads=4,
+                    #enable_pcm=True, 
+                )
 
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
-        # self.scene.contact_forces.update_period = self.sim.dt
-        # self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        self.scene = self.scene_cfg(num_envs=4096, env_spacing=2.5)
+        self.scene.contact_forces.update_period = self.sim.dt
+        self.scene.height_scanner.update_period = self.decimation * self.sim.dt
 
         # check if terrain levels curriculum is enabled - if so, enable curriculum for terrain generator
         # this generates terrains with increasing difficulty and is useful for training
@@ -625,11 +650,15 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
 
-        self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
-        self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
+        # self.scene.terrain.terrain_generator.sub_terrains["boxes"].grid_height_range = (0.025, 0.1)
+        # self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_range = (0.01, 0.06)
+        # self.scene.terrain.terrain_generator.sub_terrains["random_rough"].noise_step = 0.01
 
         self.sim.physics_material = self.scene.terrain.physics_material
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.decimation * self.sim.dt
+        if self.scene.contact_forces is not None:
+            self.scene.contact_forces.update_period = self.sim.dt
 
         # Set extended domain randomization parameters
         # self.events.physics_material.params["static_friction_range"] = (0.1, 3.16)

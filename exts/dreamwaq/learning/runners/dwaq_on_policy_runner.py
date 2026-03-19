@@ -38,6 +38,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from exts.dreamwaq.learning.modules.ac_dwaq import ActorCriticDwaq
 from exts.dreamwaq.learning.modules.rms import RunningMeanStd
+from exts.dreamwaq.learning.modules.cenet import CENet 
 from exts.dreamwaq.learning.algorithms.dwaq_ppo import PPOWAQ
 from exts.dreamwaq.envs.wrappers.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 
@@ -96,7 +97,11 @@ class DwaqOnPolicyRunner:
         if not hasattr(self.actor_critic, "nan_detected"):
             self.actor_critic.nan_detected = False
         self.alg = PPOWAQ(self.actor_critic, device=self.device, **self.alg_cfg)
-        self.cenet = self.actor_critic.cenet
+        self.cenet = CENet(
+            device=self.device
+        ).to(self.device)
+        self.cenet_optimizer = torch.optim.Adam(self.cenet.parameters(), lr=1e-3)
+
         if self.vae_cfg:
             for key, value in self.vae_cfg.items():
                 if hasattr(self.cenet, key):
@@ -105,7 +110,7 @@ class DwaqOnPolicyRunner:
         self.alg.init_storage(
             self.env.num_envs,
             self.num_steps_per_env,
-            [self.num_actor_obs],
+            [self.num_actor_obs+self.latent_dim],
             [self.num_critic_obs],
             [self.env.num_actions],
         )
@@ -200,6 +205,7 @@ class DwaqOnPolicyRunner:
             )
 
         self.alg.actor_critic.train()
+        self.cenet.train()
 
         ep_infos = []
         rewbuffer = deque(maxlen=100)
@@ -249,10 +255,12 @@ class DwaqOnPolicyRunner:
                     else:
                         obs_history_flat = self.obs_history_buffer.view(self.env.num_envs, -1)
 
+                    
+                    est_next_obs, est_vel, mu, logvar, z = self.cenet.before_action(obs_history_flat, true_vel_norm)
+                    vel_input = est_vel
+                    actor_obs_input = torch.cat((obs_norm, vel_input, z), dim=-1)
                     critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
-                    actor_obs_input = obs_norm
-                    self.cenet.before_action(obs_history_flat, true_vel_norm)
-                    actions = self.alg.act(actor_obs_input, critic_obs_input, obs_history=obs_history_flat)
+                    actions = self.alg.act(actor_obs_input, critic_obs_input)
 
                     next_obs_dict, rewards, dones, infos = self.env.step(actions)
                     # rewards = rewards.to(self.device)
@@ -285,7 +293,7 @@ class DwaqOnPolicyRunner:
                         obs_norm_next = (obs_norm_next - self.obs_rms.mean) / torch.sqrt(self.obs_rms.var + 1e-6)
 
                     self.cenet.after_action(obs_norm_next)
-                    self.alg.process_env_step(obs_norm_next, rewards, dones, infos)
+                    self.alg.process_env_step(rewards, dones, infos)
 
                     self.obs_history_buffer[:, :-1, :] = self.obs_history_buffer[:, 1:, :].clone()
                     self.obs_history_buffer[:, -1, :] = next_obs.clone()
@@ -317,13 +325,13 @@ class DwaqOnPolicyRunner:
                 critic_obs_input = torch.cat((obs_norm, priv_obs_norm), dim=-1)
                 self.alg.compute_returns(critic_obs_input)
 
-            mean_loss = self.alg.update(it)
-            if mean_loss is None:
-                mean_loss = {
-                    "value_function": 0.0,
-                    "surrogate": 0.0,
-                    "entropy_loss": 0.0,
-                }
+            mean_loss, mean_surrogate_loss = self.alg.update()
+            # if mean_loss is None:
+            #     mean_loss = {
+            #         "value_function": 0.0,
+            #         "surrogate": 0.0,
+            #         "entropy_loss": 0.0,
+            #     }
             mean_cenet_loss, vel_loss, recon_loss, kl_loss = self.cenet.update()
             learn_time = time.time() - start - collection_time
 
@@ -337,9 +345,9 @@ class DwaqOnPolicyRunner:
                         "lenbuffer": lenbuffer,
                         "collection_time": collection_time,
                         "learn_time": learn_time,
-                        "mean_value_loss": mean_loss["value_function"],
-                        "mean_surrogate_loss": mean_loss["surrogate"],
-                        "mean_entropy_loss": mean_loss["entropy_loss"],
+                        "mean_value_loss": mean_loss,
+                        "mean_surrogate_loss": mean_surrogate_loss,
+                        # "mean_entropy_loss": mean_loss["entropy_loss"],
                         "mean_cenet_loss": mean_cenet_loss,
                         "vel_loss": vel_loss,
                         "recon_loss": recon_loss,
@@ -394,12 +402,12 @@ class DwaqOnPolicyRunner:
 
         self.writer.add_scalar("Loss/value_function", locs["mean_value_loss"], locs["it"])
         self.writer.add_scalar("Loss/surrogate", locs["mean_surrogate_loss"], locs["it"])
-        self.writer.add_scalar("Loss/entropy", locs["mean_entropy_loss"], locs["it"])
+        # self.writer.add_scalar("Loss/entropy", locs["mean_entropy_loss"], locs["it"])
         self.writer.add_scalar("Loss/cenet", locs["mean_cenet_loss"], locs["it"])
         self.writer.add_scalar("Loss/cenet_vel_est", locs["vel_loss"], locs["it"])
         self.writer.add_scalar("Loss/cenet_reconstruction", locs["recon_loss"], locs["it"])
         self.writer.add_scalar("Loss/cenet_kl", locs["kl_loss"], locs["it"])
-        self.writer.add_scalar("Loss/learning_rate", self.alg.lr, locs["it"])
+        # self.writer.add_scalar("Loss/learning_rate", self.alg.lr, locs["it"])
         self.writer.add_scalar("Perf/total_fps", fps, locs["it"])
 
         if len(locs["rewbuffer"]) > 0:
@@ -419,7 +427,7 @@ class DwaqOnPolicyRunner:
                 f"(collection: {locs['collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"
                 f"{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"
                 f"{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"
-                f"{'Entropy loss:':>{pad}} {locs['mean_entropy_loss']:.4f}\n"
+                # f"{'Entropy loss:':>{pad}} {locs['mean_entropy_loss']:.4f}\n"
                 f"{'-' * width}\n"
                 f"{'CENet loss:':>{pad}} {locs['mean_cenet_loss']:.4f}\n"
                 f"{'CENet velocity estimation error:':>{pad}} {locs['vel_loss']:.4f}\n"
@@ -438,7 +446,7 @@ class DwaqOnPolicyRunner:
                 f"(collection: {locs['collection_time']:.3f}s, learning {locs['learn_time']:.3f}s)\n"
                 f"{'Value function loss:':>{pad}} {locs['mean_value_loss']:.4f}\n"
                 f"{'Surrogate loss:':>{pad}} {locs['mean_surrogate_loss']:.4f}\n"
-                f"{'Entropy loss:':>{pad}} {locs['mean_entropy_loss']:.4f}\n"
+                # f"{'Entropy loss:':>{pad}} {locs['mean_entropy_loss']:.4f}\n"
                 f"{'Mean action noise std:':>{pad}} {mean_std.item():.2f}\n"
             )
 
@@ -477,6 +485,7 @@ class DwaqOnPolicyRunner:
                 "model_state_dict": self.alg.actor_critic.state_dict(),
                 "optimizer_state_dict": self.alg.optimizer.state_dict(),
                 "cenet_state_dict": self.cenet.state_dict(),
+                'cenet_optimizer_state_dict': self.cenet.optimizer.state_dict(),
                 "iter": self.current_learning_iteration,
                 "infos": infos,
                 "rms": rms_data,
@@ -493,7 +502,7 @@ class DwaqOnPolicyRunner:
 
         if load_optimizer and "optimizer_state_dict" in loaded_dict:
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
-
+            self.cenet.optimizer.load_state_dict(loaded_dict['cenet_optimizer_state_dict'])
         self.current_learning_iteration = loaded_dict["iter"]
 
         if "rms" in loaded_dict:
