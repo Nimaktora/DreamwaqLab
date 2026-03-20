@@ -201,19 +201,19 @@ class EventCfg:
 # -------------------
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "static_friction_range": (0.10, 2.5),
-            "dynamic_friction_range": (0.1, 2.5),
-            "restitution_range": (0.0, 1.0),
+            "dynamic_friction_range": (0.1, 2.0),
+            "restitution_range": (0.0, 0.05),
             "num_buckets": 64,
         },
     )
 
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
-        mode="startup",
+        mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
             "mass_distribution_params": (-2.0, 3.0),
@@ -225,7 +225,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+            "com_range": {"x": (-0.03, 0.03), "y": (-0.03, 0.03), "z": (-0.03, 0.03)},
         },
     )
 # -------------------
@@ -234,7 +234,7 @@ class EventCfg:
     #     mode="startup",
     #     params={
     #         "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-    #         "friction_distribution_params": (0.0, 0.01),
+    #         "friction_distribution_params": (0.0, 0.05),
     #         "operation": "add",
     #     },
     # )
@@ -259,7 +259,7 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "force_range": (-10.0, 10.0),
+            "force_range": (-8.0, 8.0),
             "torque_range": (-2.0, 2.0),
         },
     )
@@ -297,7 +297,7 @@ class EventCfg:
         interval_range_s=(8.0, 12.0),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "velocity_range": {"x": (-1.0, 1.0), "y": (-1.0, 1.0)},
+            "velocity_range": {"x": (-1.5, 1.5), "y": (-1.5, 1.5)},
         },
     )
 # -------------------
@@ -506,6 +506,7 @@ class ObservationsCfg:
                 # "offset": 0.3,
             },
             # clip=(-2.0, 5.0),
+            noise=Unoise(n_min=-0.1, n_max=0.1),
             clip=(-4.0, 5.0),
         )  # :contentReference[oaicite:18]{index=18}
 

@@ -14,7 +14,7 @@ class RobotEnvCfg(BaseRobotEnvCfg):
         self.scene.num_envs = num_envs
         self.scene.terrain.terrain_generator.num_rows = 10
         self.scene.terrain.terrain_generator.num_cols = 20
-        # self.scene.terrain.terrain_generator.seed = 0
+        self.scene.terrain.terrain_generator.seed = 42
         # self.commands.base_velocity.ranges = self.commands.base_velocity.limit_ranges
         self.use_graphics = True  # Ensure graphics are enabled for training
         self.base_velocity = 1.0  # Some default value
