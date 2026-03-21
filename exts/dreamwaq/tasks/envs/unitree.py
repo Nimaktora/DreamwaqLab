@@ -126,6 +126,7 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
             enabled_self_collisions=False,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=1,
+            fix_root_link=False,
         ),
     ),
 
@@ -133,18 +134,19 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
         pos=(0.0, 0.0, 0.4),
         joint_pos={
             'FL_hip_joint': 0.1,   # [rad]
-            'RL_hip_joint': 0.1,   # [rad]
-            'FR_hip_joint': -0.1 ,  # [rad]
-            'RR_hip_joint': -0.1,   # [rad]
-
             'FL_thigh_joint': 0.8,     # [rad]
-            'RL_thigh_joint': 1.,   # [rad]
-            'FR_thigh_joint': 0.8,     # [rad]
-            'RR_thigh_joint': 1.,   # [rad]
-
             'FL_calf_joint': -1.5,   # [rad]
-            'RL_calf_joint': -1.5,    # [rad]
+
+            'FR_hip_joint': -0.1 ,  # [rad]
+            'FR_thigh_joint': 0.8,     # [rad]
             'FR_calf_joint': -1.5,  # [rad]
+
+            'RL_hip_joint': 0.1,   # [rad]
+            'RL_thigh_joint': 1.,   # [rad]
+            'RL_calf_joint': -1.5,    # [rad]
+
+            'RR_hip_joint': -0.1,   # [rad]
+            'RR_thigh_joint': 1.,   # [rad]
             'RR_calf_joint': -1.5,    # [rad]
         },
         joint_vel={".*": 0.0},
@@ -198,7 +200,7 @@ UNITREE_GO1_CFG = UnitreeArticulationCfg(
     # },
     actuators={
     "base_legs": DCMotorCfg(
-        joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
+        joint_names_expr=[".*"],
         effort_limit=23.5,
         saturation_effort=23.5,
         velocity_limit=30.0,

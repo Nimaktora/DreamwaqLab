@@ -21,7 +21,7 @@ from collections import deque
 
 import torch
 from rsl_rl.env import VecEnv
-from rsl_rl.networks import EmpiricalNormalization
+# from rsl_rl.networks import EmpiricalNormalization
 from torch.utils.tensorboard import SummaryWriter as TensorboardSummaryWriter
 from tqdm import tqdm
 

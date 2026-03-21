@@ -25,6 +25,7 @@ from exts.dreamwaq.utils.terrains_cfg import RailwayTracksTerrainCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
 from typing import Dict, Tuple, Sequence
 
 
@@ -102,7 +103,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="generator",  # "plane", "generator"
-        terrain_generator=COBBLESTONE_ROAD_CFG,  # None, ROUGH_TERRAINS_CFG
+        terrain_generator=ROUGH_TERRAINS_CFG,  # None, ROUGH_TERRAINS_CFG
         max_init_terrain_level=1,
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
@@ -123,7 +124,7 @@ class RobotSceneCfg(InteractiveSceneCfg):
 
     # sensors
     height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/trunk",
+        prim_path="{ENV_REGEX_NS}/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -201,19 +202,19 @@ class EventCfg:
 # -------------------
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
-        mode="reset",
+        mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*_foot"),
             "static_friction_range": (0.10, 2.5),
             "dynamic_friction_range": (0.1, 2.0),
-            "restitution_range": (0.0, 0.05),
+            "restitution_range": (0.0, 1.00),
             "num_buckets": 64,
         },
     )
 
     add_base_mass = EventTerm(
         func=mdp.randomize_rigid_body_mass,
-        mode="reset",
+        mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
             "mass_distribution_params": (-2.0, 3.0),
@@ -322,7 +323,7 @@ class CommandsCfg:
     # )
     base_velocity = mdp.VelocityCommandWithRotateCfg(
         asset_name="robot",
-        resampling_time_range=(10.0, 15.0),
+        resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.1,
         rel_heading_envs=0.05,
         rel_rotate_only_envs=0.1,
@@ -408,7 +409,7 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(
             func=mdp_std.joint_pos_rel,
             params={
-                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, preserve_order=True)
             },
             clip=(-100, 100),
             noise=Unoise(n_min=-0.01, n_max=0.01),
@@ -417,7 +418,7 @@ class ObservationsCfg:
         joint_vel_rel = ObsTerm(
             func=mdp_std.joint_vel_rel,
             params={
-                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, preserve_order=True)
             },
             clip=(-100, 100),
             # scale=0.05,
@@ -469,7 +470,7 @@ class ObservationsCfg:
         joint_pos_rel = ObsTerm(
             func=mdp_std.joint_pos_rel,
             params={
-                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, preserve_order=True)
             },
             clip=(-100, 100),
         )
@@ -477,7 +478,7 @@ class ObservationsCfg:
         joint_vel_rel = ObsTerm(
             func=mdp_std.joint_vel_rel,
             params={
-                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
+                "asset_cfg": SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names, preserve_order=True)
             },
             # scale=0.05,
             clip=(-100, 100),
