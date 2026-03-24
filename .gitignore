@@ -183,7 +183,6 @@ cython_debug/
 .vscode/launch.json
 .vscode/settings.json
 
-# _isaaclab/
-# scripts/
-# standalone/
-# # exts/
+_isaaclab/
+standalone/
+
