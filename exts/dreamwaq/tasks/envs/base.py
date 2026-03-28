@@ -25,7 +25,8 @@ from exts.dreamwaq.utils.terrains_cfg import RailwayTracksTerrainCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
+# from isaaclab.terrains.config.rough import ROUGH_TERRAINS_CFG
+from isaaclab.terrains.config.rough import TerrainGeneratorCfg
 from typing import Dict, Tuple, Sequence
 
 
@@ -36,9 +37,7 @@ from isaaclab.assets import Articulation, RigidObject
 # if TYPE_CHECKING:
 from isaaclab.envs import ManagerBasedEnv, ManagerBasedRLEnv
 
-##################
-# Scene definition
-##################
+
 # cobblestone road (optional)
 COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
     size=(8.0, 8.0),
@@ -94,7 +93,52 @@ COBBLESTONE_ROAD_CFG = terrain_gen.TerrainGeneratorCfg(
 )
 
 
+# This cfg is modified version of IsaacLab source terrain.
+ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
+    size=(8.0, 8.0),
+    border_width=20.0,
+    num_rows=10,
+    num_cols=20,
+    horizontal_scale=0.1,
+    vertical_scale=0.005,
+    slope_threshold=0.75,
+    use_cache=False,
+    sub_terrains={
+        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+            proportion=0.3,
+            step_height_range=(0.05, 0.23),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        "pyramid_stairs_inv": terrain_gen.MeshInvertedPyramidStairsTerrainCfg(
+            proportion=0.3,
+            step_height_range=(0.05, 0.23),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        ),
+        # "boxes": terrain_gen.MeshRandomGridTerrainCfg(
+        #     proportion=0.2, grid_width=0.45, grid_height_range=(0.05, 0.2), platform_width=2.0
+        # ),
+        "random_rough": terrain_gen.HfRandomUniformTerrainCfg(
+            proportion=0.2, noise_range=(0.02, 0.10), noise_step=0.02, border_width=0.25
+        ),
+        "hf_pyramid_slope": terrain_gen.HfPyramidSlopedTerrainCfg(
+            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+        ),
+        "hf_pyramid_slope_inv": terrain_gen.HfInvertedPyramidSlopedTerrainCfg(
+            proportion=0.1, slope_range=(0.0, 0.4), platform_width=2.0, border_width=0.25
+        ),
+    },
+)
 
+
+##################
+# Scene definition
+##################
 @configclass
 class RobotSceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
@@ -198,7 +242,7 @@ class EventCfg:
     #         }
     #     },
     # )
-    # startup
+
 # -------------------
     physics_material = EventTerm(
         func=mdp.randomize_rigid_body_material,
@@ -226,7 +270,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "com_range": {"x": (-0.03, 0.03), "y": (-0.03, 0.03), "z": (-0.03, 0.03)},
+            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
         },
     )
 # -------------------
@@ -254,22 +298,21 @@ class EventCfg:
         },
     )
 
-    # # reset
-    base_external_force_torque = EventTerm(
-        func=mdp.apply_external_force_torque,
-        mode="reset",
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
-            "force_range": (-8.0, 8.0),
-            "torque_range": (-2.0, 2.0),
-        },
-    )
+    # base_external_force_torque = EventTerm(
+    #     func=mdp.apply_external_force_torque,
+    #     mode="reset",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="trunk"),
+    #         "force_range": (-8.0, 8.0),
+    #         "torque_range": (-2.0, 2.0),
+    #     },
+    # )
 # -------------------
     reset_base = EventTerm(
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.1, 0.1), "pitch": (-0.1, 0.1), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "roll": (-0.01, 0.01), "pitch": (-0.01, 0.01), "yaw": (-3.14, 3.14)},
             "velocity_range": {
                 "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
@@ -368,19 +411,6 @@ class ObservationsCfg:
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
-        # base_ang_vel = ObsTerm(
-        #     func=mdp.body_ang_vel,
-        #     clip=(-100, 100),
-        #     noise=Unoise(n_min=-0.2, n_max=0.2),
-        # )
-        #  observations.py has errors
-        # def projected_gravity(env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")) -> torch.Tensor:
-        #     """Gravity projection on the asset's root frame."""
-        #     # extract the used quantities (to enable type-hinting)
-        #     asset: RigidObject = env.scene[asset_cfg.name]
-        #     print(asset.data.projected_gravity_b)
-        #     return asset.data.projected_gravity_b
-
         base_ang_vel = ObsTerm(
             func=mdp_std.base_ang_vel,
             clip=(-100, 100),
@@ -400,11 +430,6 @@ class ObservationsCfg:
             # scale=(2.0, 2.0, 0.25),
             clip=(-100, 100),
         )
-
-        # joint_pos_rel = ObsTerm(
-        #     func=mdp_std.joint_pos_rel,
-        #     clip=(-100, 100),
-        # )
 
         joint_pos_rel = ObsTerm(
             func=mdp_std.joint_pos_rel,
@@ -428,7 +453,6 @@ class ObservationsCfg:
         last_action = ObsTerm(
             func=mdp_std.last_action,  # was: mdp.last_action
             clip=(-100, 100),
-            # scale=
         )  # :contentReference[oaicite:9]{index=9}
 
         def __post_init__(self):
@@ -567,7 +591,7 @@ class RewardsCfg:
     action_rate = RewTerm(func=mdp_std.action_rate_l2, weight=-0.01)
     action_smoothness = RewTerm(func=mdp.penalty_action_smoothness, weight=-0.01, params={"action_term_name": "JointPositionAction"})
     # power_distribution_var = RewTerm(func=mdp.penalty_power_distribution_var, weight=-1e-6)
-    stand_still = RewTerm(func=mdp.penalty_stand_still, weight=-0.1)
+    stand_still = RewTerm(func=mdp.penalty_stand_still, weight=-0.2)
 
 @configclass
 class TerminationsCfg:
@@ -667,36 +691,8 @@ class BaseRobotEnvCfg(ManagerBasedRLEnvCfg):
         # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
         # self.events.physics_material.params["restitution_range"] = (0.0, 1.00)
         # self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
-        self.events.add_base_mass.params["recompute_inertia"] = True
         # self.events.physics_material.params["static_friction_range"] = (0.15, 3.16)
         # self.events.physics_material.params["dynamic_friction_range"] = (0.1, 3.0)
         # self.events.physics_material.params["restitution_range"] = (0.0, 0.05)
         # self.events.add_base_mass.params["mass_distribution_params"] = (-2.0, 10.0)
-        # self.events.add_base_mass.params["recompute_inertia"] = True
-
-
-
-
-
-        # from exts.dreamwaq.tasks.envs.unitree import UNITREE_GO1_CFG
-        # from isaaclab.managers import SceneEntityCfg
-        # from isaaclab.envs import ManagerBasedRLEnv
-        # from isaaclab.assets import Articulation
-        # from typing import TYPE_CHECKING
-        # if TYPE_CHECKING:
-        #     from isaaclab.envs import ManagerBasedRLEnv
-        # import exts.dreamwaq.envs.mdp.rewards as mdp
-        # def _get_robot(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> Articulation:
-        #     return env.scene[asset_cfg.name]
-
-
-
-        # asset_cfg = SceneEntityCfg("robot", joint_names=UNITREE_GO1_CFG.joint_sdk_names)
-        # env = ManagerBasedRLEnv(asset_cfg.name)
-        # # asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-        # # robot = mdp.rewards._get_robot(env, asset_cfg)
-        
-        # print("requested joint names:", UNITREE_GO1_CFG.joint_sdk_names)
-        # print("resolved joint ids:", asset_cfg.joint_ids)
-        # print("joint_ids:", asset_cfg.joint_ids)
-        # print("joint_names:", asset_cfg.joint_names)
+        self.events.add_base_mass.params["recompute_inertia"] = True

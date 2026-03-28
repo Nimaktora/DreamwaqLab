@@ -18,62 +18,95 @@ if TYPE_CHECKING:
 # Terrain curriculum
 # =============================================================================
 
+# def terrain_levels_vel(
+#     env: ManagerBasedRLEnv,
+#     env_ids: Sequence[int],
+#     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+#     command_name: str = "base_velocity",
+#     yaw_tracking_tol: float = 0.2,
+#     min_yaw_cmd_for_tracking: float = 0.2,
+# ) -> torch.Tensor:
+#     """Terrain curriculum based on how well the robot "covers" the commanded motion.
+
+#     - Primary: walk far enough -> move up.
+#     - Secondary: if yaw command exists and yaw is tracked well -> allow move up even if distance is small
+#       (useful for "rotate-in-place" commands).
+
+#     Notes
+#     -----
+#     Works only with TerrainImporter + terrain_type="generator".
+#     """
+#     asset: Articulation = env.scene[asset_cfg.name]
+#     terrain: TerrainImporter = env.scene.terrain
+#     command = env.command_manager.get_command(command_name)  # shape: (num_envs, 3) in base frame
+
+#     env_ids_t = torch.as_tensor(env_ids, device=env.device, dtype=torch.long)
+
+#     # --- distance traveled in XY (world frame)
+#     distance = torch.norm(asset.data.root_pos_w[env_ids_t, :2] - env.scene.env_origins[env_ids_t, :2], dim=1)
+
+#     # --- expected distance based on commanded linear velocity magnitude
+#     lin_cmd_mag = torch.norm(command[env_ids_t, :2], dim=1)
+#     # expected_distance = lin_cmd_mag * env.max_episode_length_s
+#     episode_steps = env.episode_length_buf[env_ids_t].float()
+#     episode_time  = episode_steps * env.step_dt
+#     expected_distance = lin_cmd_mag * episode_time
+
+#     # --- yaw tracking (base frame yaw rate)
+#     yaw_vel = asset.data.root_ang_vel_b[env_ids_t, 2]
+#     yaw_cmd = command[env_ids_t, 2]
+#     yaw_cmd_active = torch.abs(yaw_cmd) > min_yaw_cmd_for_tracking
+#     yaw_tracked = torch.abs(yaw_vel - yaw_cmd) < yaw_tracking_tol
+
+#     # Move up condition:
+#     # 1) Walked more than half a tile length in X (terrain tile size[0] is the tile length)
+#     # 2) OR (yaw cmd is meaningful AND yaw is tracked well)
+#     level_distance = terrain.cfg.terrain_generator.size[0] / 2
+#     rot_only = lin_cmd_mag < 0.05   # 0.05 m/s -> rotate command 
+#     move_up = (distance > level_distance) | (rot_only & yaw_cmd_active & yaw_tracked)
+
+#     # Move down condition:
+#     # If robot is commanded to translate and it didn't move enough.
+#     # (Guard: if lin command is near zero, don't punish by moving down purely due to expected_distance ~ 0.)
+#     lin_cmd_active = lin_cmd_mag > 1e-3
+#     move_down = lin_cmd_active & (distance < expected_distance * 0.5)
+#     move_down &= ~move_up  # never move down if move_up
+
+#     # Update terrain levels / origins
+#     terrain.update_env_origins(env_ids_t, move_up, move_down)
+#     return torch.mean(terrain.terrain_levels.float())
+
 def terrain_levels_vel(
     env: ManagerBasedRLEnv,
     env_ids: Sequence[int],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-    command_name: str = "base_velocity",
-    yaw_tracking_tol: float = 0.2,
-    min_yaw_cmd_for_tracking: float = 0.2,
 ) -> torch.Tensor:
-    """Terrain curriculum based on how well the robot "covers" the commanded motion.
+    """Curriculum based on the distance the robot walked when commanded to move at a desired velocity.
 
-    - Primary: walk far enough -> move up.
-    - Secondary: if yaw command exists and yaw is tracked well -> allow move up even if distance is small
-      (useful for "rotate-in-place" commands).
+    This term is used to increase the difficulty of the terrain when the robot walks far enough and decrease the
+    difficulty when the robot walks less than half of the distance required by the commanded velocity.
 
-    Notes
-    -----
-    Works only with TerrainImporter + terrain_type="generator".
+    .. note::
+        It is only possible to use this term with the terrain type ``generator``. For further information
+        on different terrain types, check the :class:`isaaclab.terrains.TerrainImporter` class.
+
+    Returns:
+        The mean terrain level for the given environment ids.
     """
+    # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
     terrain: TerrainImporter = env.scene.terrain
-    command = env.command_manager.get_command(command_name)  # shape: (num_envs, 3) in base frame
-
-    env_ids_t = torch.as_tensor(env_ids, device=env.device, dtype=torch.long)
-
-    # --- distance traveled in XY (world frame)
-    distance = torch.norm(asset.data.root_pos_w[env_ids_t, :2] - env.scene.env_origins[env_ids_t, :2], dim=1)
-
-    # --- expected distance based on commanded linear velocity magnitude
-    lin_cmd_mag = torch.norm(command[env_ids_t, :2], dim=1)
-    # expected_distance = lin_cmd_mag * env.max_episode_length_s
-    episode_steps = env.episode_length_buf[env_ids_t].float()
-    episode_time  = episode_steps * env.step_dt
-    expected_distance = lin_cmd_mag * episode_time
-
-    # --- yaw tracking (base frame yaw rate)
-    yaw_vel = asset.data.root_ang_vel_b[env_ids_t, 2]
-    yaw_cmd = command[env_ids_t, 2]
-    yaw_cmd_active = torch.abs(yaw_cmd) > min_yaw_cmd_for_tracking
-    yaw_tracked = torch.abs(yaw_vel - yaw_cmd) < yaw_tracking_tol
-
-    # Move up condition:
-    # 1) Walked more than half a tile length in X (terrain tile size[0] is the tile length)
-    # 2) OR (yaw cmd is meaningful AND yaw is tracked well)
-    level_distance = terrain.cfg.terrain_generator.size[0] / 2
-    rot_only = lin_cmd_mag < 0.05   # 0.05 m/s -> rotate command 
-    move_up = (distance > level_distance) | (rot_only & yaw_cmd_active & yaw_tracked)
-
-    # Move down condition:
-    # If robot is commanded to translate and it didn't move enough.
-    # (Guard: if lin command is near zero, don't punish by moving down purely due to expected_distance ~ 0.)
-    lin_cmd_active = lin_cmd_mag > 1e-3
-    move_down = lin_cmd_active & (distance < expected_distance * 0.5)
-    move_down &= ~move_up  # never move down if move_up
-
-    # Update terrain levels / origins
-    terrain.update_env_origins(env_ids_t, move_up, move_down)
+    command = env.command_manager.get_command("base_velocity")
+    # compute the distance the robot walked
+    distance = torch.norm(asset.data.root_pos_w[env_ids, :2] - env.scene.env_origins[env_ids, :2], dim=1)
+    # robots that walked far enough progress to harder terrains
+    move_up = distance > terrain.cfg.terrain_generator.size[0] / 2
+    # robots that walked less than half of their required distance go to simpler terrains
+    move_down = distance < torch.norm(command[env_ids, :2], dim=1) * env.max_episode_length_s * 0.5
+    move_down *= ~move_up
+    # update terrain levels
+    terrain.update_env_origins(env_ids, move_up, move_down)
+    # return the mean terrain level
     return torch.mean(terrain.terrain_levels.float())
 
 

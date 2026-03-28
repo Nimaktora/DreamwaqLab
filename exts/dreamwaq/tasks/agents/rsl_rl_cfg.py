@@ -41,7 +41,7 @@ class DwaqPpoRunnerCfg(RslRlOnPolicyRunnerCfg):
 
     num_steps_per_env = 24
     max_iterations = 5000
-    save_interval = 50
+    save_interval = 100
     experiment_name = "dwaq"
     empirical_normalization = False  # Runner 내부에서 RMS를 직접 관리하므로 False
     

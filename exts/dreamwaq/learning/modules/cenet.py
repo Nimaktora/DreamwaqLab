@@ -136,9 +136,13 @@ class CENet(nn.Module):
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 64),
             nn.ELU(),
+            # nn.Linear(32, 64),
+            # nn.ELU(),
             nn.Linear(64, 128),
             nn.ELU(),
-            nn.Linear(128, output_dim)
+            nn.Linear(128, 256),
+            nn.ELU(),
+            nn.Linear(256, output_dim),
         )
 
         # Logging
@@ -265,20 +269,25 @@ class CENet(nn.Module):
             logvar_batch = logvar
             context_vec_batch = z
 
+            # loss weight
+            weight_vel_loss = 1.3
+            weight_recon_loss = 4.5
+
             # loss calculation
             mse_loss = nn.MSELoss(reduction='none')
-            vel_loss = mse_loss(est_vel_batch, true_vel_batch).sum(dim=1).mean()
-            recon_loss = mse_loss(est_onext_batch, true_onext_batch).sum(dim=1).mean()
+            vel_loss = weight_vel_loss * mse_loss(est_vel_batch, true_vel_batch).sum(dim=1).mean()
+            recon_loss =  weight_recon_loss * mse_loss(est_onext_batch, true_onext_batch).sum(dim=1).mean()
             # mse_loss = nn.MSELoss()
             # vel_loss = mse_loss(est_vel_batch, true_vel_batch)
             # recon_loss = mse_loss(est_onext_batch, true_onext_batch)
+            
 
             klds = -0.5 * (1 + logvar_batch - mu_batch.pow(2) - logvar_batch.exp())
             kl_loss = klds.sum(1).mean() * self.beta
             # kl_loss = klds.sum(1).mean(0, True) * self.beta
             # kl_loss = (-0.5 * torch.mean(1 + logvar_batch - mu_batch.pow(2) - logvar_batch.exp())) * self.beta
 
-            total_loss = vel_loss + recon_loss + kl_loss
+            total_loss =  vel_loss + recon_loss + kl_loss
 
             self.optimizer.zero_grad()
 
