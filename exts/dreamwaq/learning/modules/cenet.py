@@ -134,10 +134,10 @@ class CENet(nn.Module):
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 64),
+            nn.Linear(latent_dim, 32),
             nn.ELU(),
-            # nn.Linear(32, 64),
-            # nn.ELU(),
+            nn.Linear(32, 64),
+            nn.ELU(),
             nn.Linear(64, 128),
             nn.ELU(),
             nn.Linear(128, output_dim),
