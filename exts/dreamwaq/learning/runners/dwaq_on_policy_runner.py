@@ -213,7 +213,7 @@ class DwaqOnPolicyRunner:
         cur_episode_length = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
         obs_dict, extras = self.env.get_observations()
         obs = obs_dict["policy"] if isinstance(obs_dict, dict) else obs_dict
-        privileged_obs = self._get_privileged_obs(extras) # 238-45
+        privileged_obs = self._get_privileged_obs(extras)
         critic_obs_input = privileged_obs
 
         if self.obs_rms is not None:

@@ -140,9 +140,10 @@ class CENet(nn.Module):
             # nn.ELU(),
             nn.Linear(64, 128),
             nn.ELU(),
-            nn.Linear(128, 256),
+            nn.Linear(128, output_dim),
+            # nn.Linear(128, 256),
             nn.ELU(),
-            nn.Linear(256, output_dim),
+            # nn.Linear(256, output_dim),
         )
 
         # Logging
@@ -270,8 +271,10 @@ class CENet(nn.Module):
             context_vec_batch = z
 
             # loss weight
-            weight_vel_loss = 1.3
-            weight_recon_loss = 4.5
+            # weight_vel_loss = 1.3
+            # weight_recon_loss = 4.5
+            weight_vel_loss = 1.0
+            weight_recon_loss = 1.0
 
             # loss calculation
             mse_loss = nn.MSELoss(reduction='none')
